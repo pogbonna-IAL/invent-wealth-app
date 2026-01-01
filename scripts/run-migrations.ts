@@ -6,9 +6,15 @@
  * This script runs Prisma migrations using the local Prisma binary
  * to ensure the correct version (6.x) is used instead of a global 7.x.
  * 
+ * Supports Railway public TCP proxy connections via DATABASE_PUBLIC_URL.
+ * 
  * Usage:
  *   npm run db:migrate:deploy
  *   railway run npm run db:migrate:deploy
+ * 
+ * Connection priority:
+ *   1. DATABASE_PUBLIC_URL (Railway public TCP proxy connection)
+ *   2. DATABASE_URL (Railway internal connection)
  */
 
 import { execSync } from 'child_process';
@@ -37,23 +43,46 @@ function checkPrismaInstalled(): boolean {
   return true;
 }
 
+function getDatabaseUrl(): string | null {
+  // Priority 1: Use Railway public TCP proxy connection
+  if (process.env.DATABASE_PUBLIC_URL) {
+    console.log('✓ Using Railway public TCP connection (DATABASE_PUBLIC_URL)');
+    return process.env.DATABASE_PUBLIC_URL;
+  }
+  
+  // Priority 2: Fall back to standard DATABASE_URL
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+  
+  return null;
+}
+
 function checkDatabaseUrl(): boolean {
-  if (!process.env.DATABASE_URL) {
-    console.error('❌ ERROR: DATABASE_URL environment variable is not set');
+  const dbUrl = getDatabaseUrl();
+  
+  if (!dbUrl) {
+    console.error('❌ ERROR: DATABASE_PUBLIC_URL or DATABASE_URL environment variable is not set');
     console.error('');
     console.error('To fix this:');
-    console.error('1. Ensure DATABASE_URL is set in Railway environment variables');
-    console.error('2. Or set it manually: export DATABASE_URL="postgresql://..."');
+    console.error('1. Set DATABASE_PUBLIC_URL in Railway (recommended for migrations):');
+    console.error('   - Go to Railway dashboard → PostgreSQL service → Connect');
+    console.error('   - Copy the "Public Network" connection string');
+    console.error('   - Set it as DATABASE_PUBLIC_URL in your app service variables');
+    console.error('');
+    console.error('2. Or use DATABASE_URL (internal connection):');
+    console.error('   - Railway auto-generates this when services are linked');
+    console.error('   - Format: postgresql://user:password@postgres.railway.internal:5432/database');
     console.error('');
     return false;
   }
   
   // Mask password in URL for logging
-  const maskedUrl = process.env.DATABASE_URL.replace(
+  const maskedUrl = dbUrl.replace(
     /:\/\/[^:]+:[^@]+@/,
     '://****:****@'
   );
-  console.log('✓ DATABASE_URL found:', maskedUrl);
+  console.log('✓ Database URL found:', maskedUrl);
   
   return true;
 }
@@ -74,17 +103,24 @@ async function waitForDatabase(maxRetries: number = MAX_RETRIES): Promise<boolea
   const isWindows = process.platform === 'win32';
   
   // Use Prisma's migrate status command to check connectivity
-  // This is simpler and doesn't require stdin
   const prismaCommand = isWindows 
     ? `"${PRISMA_BINARY}" migrate status --schema "${schemaPath}"`
     : `${PRISMA_BINARY} migrate status --schema "${schemaPath}"`;
+  
+  // Use the correct database URL
+  const dbUrl = getDatabaseUrl();
+  const env = { ...process.env };
+  if (dbUrl) {
+    // Override DATABASE_URL with the selected connection (public or internal)
+    env.DATABASE_URL = dbUrl;
+  }
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       // Try to check migration status - this will fail if database is unreachable
       execSync(prismaCommand, {
         stdio: 'pipe',
-        env: process.env,
+        env: env,
         cwd: process.cwd(),
         shell: isWindows ? true : false,
         timeout: 10000, // 10 second timeout per attempt
@@ -151,16 +187,19 @@ async function runMigrations(): Promise<void> {
     console.error('   - Go to Railway dashboard → Your project');
     console.error('   - Check PostgreSQL service status');
     console.error('');
-    console.error('2. Verify services are linked:');
+    console.error('2. Set DATABASE_PUBLIC_URL for TCP proxy connection:');
+    console.error('   - Go to Railway dashboard → PostgreSQL service → Connect');
+    console.error('   - Copy the "Public Network" connection string');
+    console.error('   - Set it as DATABASE_PUBLIC_URL in your app service variables');
+    console.error('   - Format: postgresql://user:password@public-host:port/database');
+    console.error('');
+    console.error('3. Verify services are linked:');
     console.error('   - Ensure your app service is linked to PostgreSQL service');
     console.error('   - Railway should auto-generate DATABASE_URL when linked');
     console.error('');
-    console.error('3. Check DATABASE_URL format:');
-    console.error('   - Should be: postgresql://user:password@host:port/database');
-    console.error('   - Railway internal: postgres.railway.internal:5432');
-    console.error('   - External: your-db.railway.app:5432');
-    console.error('');
-    console.error('4. Verify database is in the same Railway project');
+    console.error('4. Check connection URLs:');
+    console.error('   - DATABASE_PUBLIC_URL: Public TCP proxy (recommended for migrations)');
+    console.error('   - DATABASE_URL: Internal connection (postgres.railway.internal:5432)');
     console.error('');
     process.exit(1);
   }
@@ -178,9 +217,20 @@ async function runMigrations(): Promise<void> {
       ? `"${PRISMA_BINARY}" migrate deploy`
       : `${PRISMA_BINARY} migrate deploy`;
     
+    // Use the correct database URL (public or internal)
+    const dbUrl = getDatabaseUrl();
+    const env = { ...process.env };
+    if (dbUrl) {
+      // Override DATABASE_URL with the selected connection
+      env.DATABASE_URL = dbUrl;
+      if (process.env.DATABASE_PUBLIC_URL) {
+        console.log('🔗 Using public TCP connection for migration');
+      }
+    }
+    
     execSync(prismaCommand, {
       stdio: 'inherit',
-      env: process.env,
+      env: env,
       cwd: process.cwd(),
       shell: isWindows ? true : false, // Use shell on Windows for proper path handling
     });
@@ -200,17 +250,21 @@ async function runMigrations(): Promise<void> {
     
     console.error('');
     console.error('Troubleshooting:');
-    console.error('1. Check DATABASE_URL is correct');
+    console.error('1. Check DATABASE_PUBLIC_URL or DATABASE_URL is correct');
     console.error('2. Verify database service is running in Railway');
-    console.error('3. Ensure services are linked in Railway');
-    console.error('4. Check migration files exist in prisma/migrations/');
-    console.error('5. Ensure Prisma version matches (should be 6.x)');
+    console.error('3. Set DATABASE_PUBLIC_URL for public TCP connection:');
+    console.error('   - Railway dashboard → PostgreSQL service → Connect');
+    console.error('   - Copy "Public Network" connection string');
+    console.error('   - Set as DATABASE_PUBLIC_URL in app service variables');
+    console.error('4. Ensure services are linked in Railway');
+    console.error('5. Check migration files exist in prisma/migrations/');
+    console.error('6. Ensure Prisma version matches (should be 6.x)');
     console.error('');
     console.error('Railway-specific checks:');
     console.error('- Go to Railway dashboard → Your project → PostgreSQL service');
     console.error('- Verify service is "Active" and not "Paused"');
     console.error('- Check service logs for any errors');
-    console.error('- Ensure DATABASE_URL is set in your app service variables');
+    console.error('- Use DATABASE_PUBLIC_URL for reliable TCP connections');
     console.error('');
     
     process.exit(1);
@@ -222,4 +276,3 @@ runMigrations().catch((error) => {
   console.error('❌ Unexpected error:', error);
   process.exit(1);
 });
-
