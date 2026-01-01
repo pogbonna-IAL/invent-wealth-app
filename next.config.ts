@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
       return process.env.RAILWAY_DEPLOYMENT_ID;
     }
     
+    // Use Railway git commit SHA if available
+    if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+      return process.env.RAILWAY_GIT_COMMIT_SHA.substring(0, 12); // Use first 12 chars
+    }
+    
     // Use git commit SHA if available (stable per commit)
     try {
       const { execSync } = require('child_process');
@@ -59,10 +64,12 @@ const nextConfig: NextConfig = {
       // Git not available or not in a git repo - fall through
     }
     
-    // Fallback: Let Next.js generate its own build ID
+    // Fallback: Generate a stable build ID based on package.json version and timestamp
     // This ensures Server Actions work correctly within the same deployment
-    // Note: For production, set BUILD_ID or ensure git is available
-    return undefined;
+    // Note: For production, set BUILD_ID or ensure git is available for stable IDs
+    const packageJson = require('./package.json');
+    const version = packageJson.version || '0.1.0';
+    return `build-${version}-${Date.now()}`;
   },
   
   async headers() {
