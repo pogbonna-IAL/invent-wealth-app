@@ -1,0 +1,170 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp
+.pnp.js
+
+# Testing
+coverage
+.nyc_output
+test-results
+playwright-report
+playwright/.cache
+*.spec.ts.snap
+*.test.ts.snap
+
+# Next.js
+.next
+out
+.swc
+next-env.d.ts
+
+# Production / Build
+build
+dist
+*.tsbuildinfo
+*.tsbuildinfo.*
+
+# Environment files
+.env
+.env*.local
+.env.development
+.env.production
+.env.test
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+*.code-workspace
+*.iml
+*.iws
+*.ipr
+
+# OS Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Git
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Deployment / Hosting
+.vercel
+.railway
+.netlify
+
+# Cache & Temporary Files
+.cache
+.parcel-cache
+.turbo
+.tmp
+tmp
+temp
+*.tmp
+*.temp
+*.cache
+.eslintcache
+
+# Security & Secrets
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets
+.secrets
+*.secret
+
+# Service Worker & PWA
+**/sw.js.map
+**/workbox-*.js
+**/workbox-*.js.map
+**/sw.js.bak
+
+# PM2
+logs
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+.pm2
+
+# Documentation
+README.md
+ARCHITECTURE.md
+*.md
+docs
+
+# Misc
+*.bak
+*.backup
+*.old
+*.orig
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+.sentryclirc
+.turbo
+storybook-static
+
+# Prisma (keep schema and migrations, exclude generated files)
+lib/generated/prisma
+prisma/migrations/**/migration.sql.bak
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+

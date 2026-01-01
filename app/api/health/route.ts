@@ -1,0 +1,43 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/server/db/prisma";
+
+export async function GET() {
+  try {
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        {
+          status: "unhealthy",
+          timestamp: new Date().toISOString(),
+          database: "not_configured",
+          error: "DATABASE_URL environment variable is not set",
+        },
+        { status: 503 }
+      );
+    }
+
+    // Check database connection
+    await prisma.$queryRaw`SELECT 1`;
+    
+    return NextResponse.json(
+      {
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        database: "connected",
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Health check failed:", error);
+    return NextResponse.json(
+      {
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        database: "disconnected",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 503 }
+    );
+  }
+}
+
