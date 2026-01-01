@@ -43,16 +43,58 @@ function checkPrismaInstalled(): boolean {
   return true;
 }
 
+function validateDatabaseUrl(url: string): boolean {
+  if (!url || url.trim() === '') {
+    return false;
+  }
+  
+  // Check if it's a valid PostgreSQL URL format
+  try {
+    const urlObj = new URL(url);
+    
+    // Validate it's a postgresql:// URL
+    if (urlObj.protocol !== 'postgresql:' && urlObj.protocol !== 'postgres:') {
+      return false;
+    }
+    
+    // Check hostname is not empty
+    if (!urlObj.hostname || urlObj.hostname.trim() === '') {
+      return false;
+    }
+    
+    // Check port is valid (if provided)
+    if (urlObj.port && (isNaN(Number(urlObj.port)) || Number(urlObj.port) <= 0)) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getDatabaseUrl(): string | null {
   // Priority 1: Use Railway public TCP proxy connection
   if (process.env.DATABASE_PUBLIC_URL) {
-    console.log('✓ Using Railway public TCP connection (DATABASE_PUBLIC_URL)');
-    return process.env.DATABASE_PUBLIC_URL;
+    const url = process.env.DATABASE_PUBLIC_URL.trim();
+    if (validateDatabaseUrl(url)) {
+      console.log('✓ Using Railway public TCP connection (DATABASE_PUBLIC_URL)');
+      return url;
+    } else {
+      console.error('⚠️  WARNING: DATABASE_PUBLIC_URL is set but invalid, falling back to DATABASE_URL');
+      console.error('   Invalid URL format or empty host');
+    }
   }
   
   // Priority 2: Fall back to standard DATABASE_URL
   if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
+    const url = process.env.DATABASE_URL.trim();
+    if (validateDatabaseUrl(url)) {
+      return url;
+    } else {
+      console.error('⚠️  WARNING: DATABASE_URL is set but invalid');
+      console.error('   Invalid URL format or empty host');
+    }
   }
   
   return null;
@@ -62,27 +104,58 @@ function checkDatabaseUrl(): boolean {
   const dbUrl = getDatabaseUrl();
   
   if (!dbUrl) {
-    console.error('❌ ERROR: DATABASE_PUBLIC_URL or DATABASE_URL environment variable is not set');
+    console.error('❌ ERROR: DATABASE_PUBLIC_URL or DATABASE_URL environment variable is not set or invalid');
     console.error('');
+    
+    // Check if variables exist but are invalid
+    if (process.env.DATABASE_PUBLIC_URL) {
+      console.error('DATABASE_PUBLIC_URL is set but invalid:');
+      console.error('   Value:', process.env.DATABASE_PUBLIC_URL.substring(0, 50) + '...');
+      console.error('   Issue: Invalid format or empty host');
+      console.error('');
+    }
+    
+    if (process.env.DATABASE_URL) {
+      console.error('DATABASE_URL is set but invalid:');
+      console.error('   Value:', process.env.DATABASE_URL.substring(0, 50) + '...');
+      console.error('   Issue: Invalid format or empty host');
+      console.error('');
+    }
+    
     console.error('To fix this:');
     console.error('1. Set DATABASE_PUBLIC_URL in Railway (recommended for migrations):');
     console.error('   - Go to Railway dashboard → PostgreSQL service → Connect');
     console.error('   - Copy the "Public Network" connection string');
+    console.error('   - Format: postgresql://user:password@host:port/database');
     console.error('   - Set it as DATABASE_PUBLIC_URL in your app service variables');
     console.error('');
     console.error('2. Or use DATABASE_URL (internal connection):');
     console.error('   - Railway auto-generates this when services are linked');
     console.error('   - Format: postgresql://user:password@postgres.railway.internal:5432/database');
+    console.error('   - Ensure the URL has a valid hostname (not empty)');
+    console.error('');
+    console.error('Common issues:');
+    console.error('- Empty or whitespace-only URL');
+    console.error('- Missing hostname in URL');
+    console.error('- Incorrect URL format');
+    console.error('- Special characters not properly escaped');
     console.error('');
     return false;
   }
   
   // Mask password in URL for logging
-  const maskedUrl = dbUrl.replace(
-    /:\/\/[^:]+:[^@]+@/,
-    '://****:****@'
-  );
-  console.log('✓ Database URL found:', maskedUrl);
+  try {
+    const urlObj = new URL(dbUrl);
+    const maskedUrl = `${urlObj.protocol}//${urlObj.username ? '****' : ''}:${urlObj.password ? '****' : ''}@${urlObj.hostname}:${urlObj.port || '5432'}${urlObj.pathname}`;
+    console.log('✓ Database URL found:', maskedUrl);
+  } catch {
+    // If URL parsing fails, just show masked version
+    const maskedUrl = dbUrl.replace(
+      /:\/\/[^:]+:[^@]+@/,
+      '://****:****@'
+    );
+    console.log('✓ Database URL found:', maskedUrl);
+  }
   
   return true;
 }
