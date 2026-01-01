@@ -35,10 +35,34 @@ const nextConfig: NextConfig = {
     "/*": ["./node_modules/.prisma/client/**/*"],
   },
   
-  // Generate unique build ID to prevent static page reuse
+  // Generate stable build ID for Server Actions compatibility
+  // Server Actions require consistent build IDs across deployments
   generateBuildId: async () => {
-    // Use BUILD_ID if provided, otherwise use timestamp
-    return process.env.BUILD_ID || `build-${Date.now()}`;
+    // Use BUILD_ID if explicitly provided (for CI/CD with stable IDs)
+    if (process.env.BUILD_ID) {
+      return process.env.BUILD_ID;
+    }
+    
+    // Use Railway deployment ID if available (stable per deployment)
+    if (process.env.RAILWAY_DEPLOYMENT_ID) {
+      return process.env.RAILWAY_DEPLOYMENT_ID;
+    }
+    
+    // Use git commit SHA if available (stable per commit)
+    try {
+      const { execSync } = require('child_process');
+      const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+      if (gitSha) {
+        return gitSha;
+      }
+    } catch {
+      // Git not available or not in a git repo - fall through
+    }
+    
+    // Fallback: Let Next.js generate its own build ID
+    // This ensures Server Actions work correctly within the same deployment
+    // Note: For production, set BUILD_ID or ensure git is available
+    return undefined;
   },
   
   async headers() {
