@@ -77,14 +77,8 @@ const providers = [
           let prismaClient;
           try {
             prismaClient = await getPrisma();
-            
-            // Test database connection
-            try {
-              await prismaClient.$connect();
-            } catch (connectError) {
-              console.error("[Auth] Database connection test failed:", connectError);
-              // Don't throw here, let the actual query fail if needed
-            }
+            // Prisma handles connections automatically - no need to test here
+            // The actual queries below will handle connection errors properly
           } catch (prismaError) {
             console.error("[Auth] Failed to load Prisma client:", prismaError);
             // Return null to indicate auth failure
@@ -202,10 +196,13 @@ function getPrismaAdapter() {
   }
   
   try {
-    return PrismaAdapter(prisma) as any;
+    // Try to create adapter, but don't fail if database isn't ready
+    const adapter = PrismaAdapter(prisma) as any;
+    return adapter;
   } catch (error) {
-    // If adapter creation fails, log warning but don't fail the build
-    console.warn("[Auth] PrismaAdapter creation failed:", error instanceof Error ? error.message : "Unknown error");
+    // Log error but return undefined - JWT strategy doesn't require adapter
+    console.warn("[Auth] PrismaAdapter unavailable (database may not be ready):", 
+      error instanceof Error ? error.message : "Unknown error");
     return undefined;
   }
 }
