@@ -324,36 +324,55 @@ export const authOptions: NextAuthConfig = {
     },
     async redirect({ url, baseUrl }) {
       // Handle redirects after authentication (email link, credentials, etc.)
-      // Redirect to callback handler which will check admin status and redirect accordingly
+      // Use NEXTAUTH_URL for proper domain resolution (Railway public domain)
+      // This prevents redirects to 0.0.0.0:8080
       
       try {
+        // Get the proper base URL from NEXTAUTH_URL or use baseUrl
+        const properBaseUrl = process.env.NEXTAUTH_URL || baseUrl;
+        
+        // Ensure properBaseUrl doesn't contain 0.0.0.0 or localhost in production
+        let finalBaseUrl = properBaseUrl;
+        if (process.env.NODE_ENV === "production" && properBaseUrl.includes("0.0.0.0")) {
+          // In production, if baseUrl is 0.0.0.0, use NEXTAUTH_URL or RAILWAY_PUBLIC_DOMAIN
+          finalBaseUrl = process.env.NEXTAUTH_URL || 
+                        (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : properBaseUrl);
+        }
+        
         // If redirecting to dashboard, use callback handler instead
         // This prevents ERR_FAILED by checking admin status before loading dashboard
-        if (url.includes("/dashboard") || url === baseUrl || url === `${baseUrl}/`) {
-          return `${baseUrl}/auth/callback`;
+        if (url.includes("/dashboard") || url === baseUrl || url === `${baseUrl}/` || url === finalBaseUrl || url === `${finalBaseUrl}/`) {
+          return `${finalBaseUrl}/auth/callback`;
         }
         
-        // If url is relative, make it absolute
+        // If url is relative, make it absolute using proper base URL
         if (url.startsWith("/")) {
-          return `${baseUrl}${url}`;
+          return `${finalBaseUrl}${url}`;
         }
         
-        // If url is absolute and same origin, allow it
+        // If url is absolute, check if it's same origin
         try {
           const urlObj = new URL(url);
-          if (urlObj.origin === baseUrl) {
+          const baseUrlObj = new URL(finalBaseUrl);
+          // If same origin, allow it
+          if (urlObj.origin === baseUrlObj.origin) {
             return url;
           }
+          // If different origin but going to dashboard, redirect to callback
+          if (urlObj.pathname.includes("/dashboard")) {
+            return `${finalBaseUrl}/auth/callback`;
+          }
         } catch {
-          // Invalid URL format
+          // Invalid URL format, use callback handler
         }
         
         // Default to callback handler for safe redirect
-        return `${baseUrl}/auth/callback`;
+        return `${finalBaseUrl}/auth/callback`;
       } catch (error) {
         console.error("[Auth] Redirect callback error:", error);
-        // Fallback to callback handler on error
-        return `${baseUrl}/auth/callback`;
+        // Fallback: use NEXTAUTH_URL or baseUrl
+        const fallbackUrl = process.env.NEXTAUTH_URL || baseUrl;
+        return `${fallbackUrl}/auth/callback`;
       }
     },
     async jwt({ token, user, account }) {
