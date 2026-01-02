@@ -324,25 +324,37 @@ export const authOptions: NextAuthConfig = {
     },
     async redirect({ url, baseUrl }) {
       // Handle redirects after authentication (email link, credentials, etc.)
-      // The dashboard layout will check admin status and redirect accordingly
+      // Redirect to callback handler which will check admin status and redirect accordingly
       
-      // If url is relative, make it absolute
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // If url is absolute and same origin, allow it
       try {
-        const urlObj = new URL(url);
-        if (urlObj.origin === baseUrl) {
-          return url;
+        // If redirecting to dashboard, use callback handler instead
+        // This prevents ERR_FAILED by checking admin status before loading dashboard
+        if (url.includes("/dashboard") || url === baseUrl || url === `${baseUrl}/`) {
+          return `${baseUrl}/auth/callback`;
         }
-      } catch {
-        // Invalid URL, use baseUrl
+        
+        // If url is relative, make it absolute
+        if (url.startsWith("/")) {
+          return `${baseUrl}${url}`;
+        }
+        
+        // If url is absolute and same origin, allow it
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.origin === baseUrl) {
+            return url;
+          }
+        } catch {
+          // Invalid URL format
+        }
+        
+        // Default to callback handler for safe redirect
+        return `${baseUrl}/auth/callback`;
+      } catch (error) {
+        console.error("[Auth] Redirect callback error:", error);
+        // Fallback to callback handler on error
+        return `${baseUrl}/auth/callback`;
       }
-      
-      // Default to baseUrl if url is invalid or external
-      return baseUrl;
     },
     async jwt({ token, user, account }) {
       // Initial sign in
