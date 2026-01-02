@@ -11,6 +11,7 @@ import { SocialShare } from "@/components/marketing/social-share";
 import { Badge } from "@/components/ui/badge";
 import { Shield, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
+import { SignupSuccessBanner } from "@/components/auth/signup-success-banner";
 
 export const metadata: Metadata = {
   title: "InventWealth - Fractional Property Ownership | Invest in Real Estate",
@@ -39,6 +40,7 @@ export default function Home() {
       <OrganizationSchema />
       <WebsiteSchema />
       <MarketingLayout>
+        <SignupSuccessBanner />
         <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative container mx-auto px-4 py-20 md:py-32 text-center overflow-hidden">

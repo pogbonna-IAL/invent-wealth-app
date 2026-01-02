@@ -151,10 +151,11 @@ export function SignInForm() {
         return;
       }
 
+      // Account created successfully - try automatic sign-in
       // Wait a moment for database transaction to complete before signing in
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // After successful signup, automatically sign in
+      // Attempt automatic sign-in
       const signInResult = await signIn("credentials", {
         email: signUpEmail.trim(),
         password: signUpPassword,
@@ -163,14 +164,18 @@ export function SignInForm() {
       });
 
       if (signInResult?.error) {
+        // Automatic sign-in failed - redirect to home page with success message
         console.error("Auto sign-in error after signup:", signInResult.error);
-        setError("Account created successfully! Please sign in manually with your email and password.");
-        setIsSignUpLoading(false);
+        
         // Clear password fields for security
         setSignUpPassword("");
         setSignUpConfirmPassword("");
+        
+        // Redirect to home page with success message
+        router.push("/?signup=success&email=" + encodeURIComponent(signUpEmail.trim()));
         return;
       } else if (signInResult?.ok) {
+        // Automatic sign-in succeeded - proceed with normal flow
         // Check if user is admin and redirect accordingly
         try {
           await new Promise(resolve => setTimeout(resolve, 100));
