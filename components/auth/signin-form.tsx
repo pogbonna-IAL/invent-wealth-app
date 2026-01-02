@@ -20,7 +20,7 @@ export function SignInForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dev credentials state
+  // Dev credentials state (for admin quick login)
   const [devEmail, setDevEmail] = useState("");
   const [devPassword, setDevPassword] = useState("");
   const [isDevLoading, setIsDevLoading] = useState(false);
@@ -33,7 +33,7 @@ export function SignInForm() {
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
   const [isSignUpLoading, setIsSignUpLoading] = useState(false);
 
-  // Check if dev credentials are enabled (always in development)
+  // Check if dev credentials tab should be shown (development only)
   useEffect(() => {
     setIsDevMode(
       typeof window !== "undefined" &&
@@ -85,7 +85,30 @@ export function SignInForm() {
         setError("Invalid email or password. Please try again.");
         setIsPasswordLoading(false);
       } else if (result?.ok) {
-        router.push(callbackUrl);
+        // Check if user is admin and redirect accordingly
+        try {
+          // Wait a moment for session to be established
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          const response = await fetch("/api/auth/check-admin");
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.isAdmin) {
+              // Admin users should go to admin portal
+              router.push("/admin");
+            } else {
+              // Regular users go to dashboard
+              router.push(callbackUrl);
+            }
+          } else {
+            // Fallback: redirect to callbackUrl
+            router.push(callbackUrl);
+          }
+        } catch (checkError) {
+          // Fallback: redirect to callbackUrl
+          router.push(callbackUrl);
+        }
       } else {
         setError("An unexpected error occurred. Please try again.");
         setIsPasswordLoading(false);
@@ -140,8 +163,25 @@ export function SignInForm() {
         setError("Account created but sign in failed. Please try signing in manually.");
         setIsSignUpLoading(false);
       } else if (signInResult?.ok) {
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // Check if user is admin and redirect accordingly
+        try {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          const response = await fetch("/api/auth/check-admin");
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.isAdmin) {
+              router.push("/admin");
+            } else {
+              router.push("/dashboard");
+            }
+          } else {
+            router.push("/dashboard");
+          }
+        } catch (checkError) {
+          router.push("/dashboard");
+        }
       }
     } catch (err) {
       console.error("Sign up error:", err);
@@ -421,10 +461,10 @@ export function SignInForm() {
             </TabsList>
 
             <TabsContent value="signin" className="space-y-4 mt-4">
-              {/* Password Sign In Form - Primary Option */}
+              {/* Password Sign In Form - Primary Option - Available in Production */}
               <div className="space-y-4">
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 mb-2">
-                  <p className="text-sm font-semibold text-primary">Sign in with Password</p>
+                  <p className="text-sm font-semibold text-primary">Sign in with Email and Password</p>
                 </div>
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                   <div className="space-y-2">

@@ -85,25 +85,62 @@ const providers = [
             return null;
           }
 
-          // Handle dev mode admin login: "admin" / "admin123" maps to admin user
-          if (isDev && trimmedEmail.toLowerCase() === "admin" && trimmedPassword === "admin123") {
+          // Handle admin login: "admin" / "admin123" maps to admin user (works in dev and production)
+          // Also check if email is the admin email directly
+          const isAdminUsername = trimmedEmail.toLowerCase() === "admin" && trimmedPassword === "admin123";
+          const isAdminEmail = trimmedEmail.toLowerCase() === "pogbonna@gmail.com";
+          
+          if (isAdminUsername || isAdminEmail) {
             const adminUser = await prismaClient.user.findUnique({
               where: { email: "pogbonna@gmail.com" },
             });
 
             if (adminUser) {
-              // Ensure admin user has password hash set
-              if (!adminUser.passwordHash) {
-                const bcrypt = require("bcryptjs");
-                const passwordHash = await bcrypt.hash("admin123", 10);
-                await prismaClient.user.update({
-                  where: { id: adminUser.id },
-                  data: { passwordHash },
-                });
+              // Verify password if using admin username shortcut
+              if (isAdminUsername) {
+                // For "admin"/"admin123" shortcut, verify against stored password
+                if (adminUser.passwordHash) {
+                  const bcrypt = require("bcryptjs");
+                  const isValidPassword = await bcrypt.compare(trimmedPassword, adminUser.passwordHash);
+                  if (!isValidPassword) {
+                    // Set password if it doesn't match (for first-time setup)
+                    const passwordHash = await bcrypt.hash("admin123", 10);
+                    await prismaClient.user.update({
+                      where: { id: adminUser.id },
+                      data: { passwordHash },
+                    });
+                  }
+                } else {
+                  // Set password if not set
+                  const bcrypt = require("bcryptjs");
+                  const passwordHash = await bcrypt.hash("admin123", 10);
+                  await prismaClient.user.update({
+                    where: { id: adminUser.id },
+                    data: { passwordHash },
+                  });
+                }
+              } else {
+                // For direct email login, verify password normally
+                if (adminUser.passwordHash) {
+                  const bcrypt = require("bcryptjs");
+                  const isValidPassword = await bcrypt.compare(trimmedPassword, adminUser.passwordHash);
+                  if (!isValidPassword) {
+                    if (isDev) {
+                      console.log("[Auth] Invalid password for admin email");
+                    }
+                    return null;
+                  }
+                } else {
+                  // No password set for admin email
+                  if (isDev) {
+                    console.log("[Auth] Admin email has no password set");
+                  }
+                  return null;
+                }
               }
 
               if (isDev) {
-                console.log("[Auth] Dev admin login successful");
+                console.log("[Auth] Admin login successful");
               }
               return {
                 id: adminUser.id,
@@ -112,28 +149,30 @@ const providers = [
                 role: adminUser.role,
               };
             } else {
-              // Create admin user if it doesn't exist
-              const bcrypt = require("bcryptjs");
-              const passwordHash = await bcrypt.hash("admin123", 10);
-              const newAdmin = await prismaClient.user.create({
-                data: {
-                  email: "pogbonna@gmail.com",
-                  name: "Admin User",
-                  role: "ADMIN",
-                  passwordHash,
-                  emailVerified: new Date(),
-                },
-              });
+              // Create admin user if it doesn't exist (only for admin username shortcut)
+              if (isAdminUsername) {
+                const bcrypt = require("bcryptjs");
+                const passwordHash = await bcrypt.hash("admin123", 10);
+                const newAdmin = await prismaClient.user.create({
+                  data: {
+                    email: "pogbonna@gmail.com",
+                    name: "Admin User",
+                    role: "ADMIN",
+                    passwordHash,
+                    emailVerified: new Date(),
+                  },
+                });
 
-              if (isDev) {
-                console.log("[Auth] Created admin user for dev login");
+                if (isDev) {
+                  console.log("[Auth] Created admin user for admin login");
+                }
+                return {
+                  id: newAdmin.id,
+                  email: newAdmin.email || undefined,
+                  name: newAdmin.name || undefined,
+                  role: newAdmin.role,
+                };
               }
-              return {
-                id: newAdmin.id,
-                email: newAdmin.email || undefined,
-                name: newAdmin.name || undefined,
-                role: newAdmin.role,
-              };
             }
           }
 
