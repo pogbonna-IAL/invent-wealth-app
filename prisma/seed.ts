@@ -308,11 +308,12 @@ async function main() {
         "Professional management",
         "Fully furnished",
       ],
-      coverImage: `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
+      // Use Picsum Photos for reliable placeholder images
+      coverImage: `https://picsum.photos/800/600?random=${i}`,
       gallery: [
-        `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
-        `https://images.unsplash.com/photo-${1500000000001 + i}?w=800`,
-        `https://images.unsplash.com/photo-${1500000000002 + i}?w=800`,
+        `https://picsum.photos/800/600?random=${i}`,
+        `https://picsum.photos/800/600?random=${i + 100}`,
+        `https://picsum.photos/800/600?random=${i + 200}`,
       ],
       propertyType,
       shortletModel,

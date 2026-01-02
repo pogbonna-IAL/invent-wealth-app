@@ -38,6 +38,9 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
     return null;
   }
 
+  // Filter out images that have failed to load
+  const validImages = displayImages.filter((_, index) => !imageErrors.has(index));
+
   const handleImageError = (index: number) => {
     setImageErrors(prev => new Set(prev).add(index));
   };
@@ -53,10 +56,16 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
   const navigateImage = (direction: "prev" | "next") => {
     if (selectedIndex === null) return;
     
+    // Find the current position in validImages
+    const currentValidIndex = validImages.findIndex(img => displayImages.indexOf(img) === selectedIndex);
+    if (currentValidIndex === -1) return;
+    
     if (direction === "prev") {
-      setSelectedIndex(selectedIndex === 0 ? displayImages.length - 1 : selectedIndex - 1);
+      const prevValidIndex = currentValidIndex === 0 ? validImages.length - 1 : currentValidIndex - 1;
+      setSelectedIndex(displayImages.indexOf(validImages[prevValidIndex]));
     } else {
-      setSelectedIndex(selectedIndex === displayImages.length - 1 ? 0 : selectedIndex + 1);
+      const nextValidIndex = currentValidIndex === validImages.length - 1 ? 0 : currentValidIndex + 1;
+      setSelectedIndex(displayImages.indexOf(validImages[nextValidIndex]));
     }
   };
 
@@ -67,30 +76,29 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
         <div className="relative">
           <div className="overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-4 px-4">
             <div className="flex gap-4" style={{ width: 'max-content' }}>
-              {displayImages.map((image, index) => {
-                if (imageErrors.has(index)) {
-                  return null; // Skip failed images
-                }
+              {validImages.map((image, displayIndex) => {
+                // Find the original index in displayImages
+                const originalIndex = displayImages.indexOf(image);
                 return (
                   <button
-                    key={index}
-                    onClick={() => openLightbox(index)}
+                    key={originalIndex}
+                    onClick={() => openLightbox(originalIndex)}
                     className="relative h-64 md:h-80 lg:h-96 w-auto min-w-[280px] md:min-w-[400px] lg:min-w-[500px] flex-shrink-0 rounded-lg overflow-hidden bg-muted group cursor-pointer"
-                    aria-label={`View image ${index + 1} of ${displayImages.length}`}
+                    aria-label={`View image ${displayIndex + 1} of ${validImages.length}`}
                   >
                     <Image
                       src={image}
-                      alt={`${propertyName} - Image ${index + 1}`}
+                      alt={`${propertyName} - Image ${displayIndex + 1}`}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                       sizes={getResponsiveSizes("galleryThumbnail")}
                       quality={getOptimizedQuality("galleryThumbnail", deviceType)}
-                      loading={shouldLoadEagerly(index) ? "eager" : "lazy"}
-                      onError={() => handleImageError(index)}
+                      loading={shouldLoadEagerly(displayIndex) ? "eager" : "lazy"}
+                      onError={() => handleImageError(originalIndex)}
                     />
                     {/* Image number overlay */}
                     <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                      {index + 1} / {displayImages.length}
+                      {displayIndex + 1} / {validImages.length}
                     </div>
                   </button>
                 );
@@ -99,7 +107,7 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
           </div>
           
           {/* Scroll indicators */}
-          {displayImages.length > 1 && (
+          {validImages.length > 1 && (
             <>
               <div className="absolute left-0 top-0 bottom-4 w-20 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
               <div className="absolute right-0 top-0 bottom-4 w-20 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none" />
@@ -108,19 +116,19 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
         </div>
         
         {/* Scroll hint */}
-        {displayImages.length > 1 && (
+        {validImages.length > 1 && (
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Scroll horizontally to view all {displayImages.length} images
+            Scroll horizontally to view all {validImages.length} images
           </p>
         )}
       </div>
 
       {/* Lightbox Modal */}
-      {selectedIndex !== null && (
+      {selectedIndex !== null && displayImages[selectedIndex] && !imageErrors.has(selectedIndex) && (
         <Dialog open={selectedIndex !== null} onOpenChange={closeLightbox}>
           <DialogContent className="max-w-7xl p-0 bg-black/95 border-none" showCloseButton={false}>
             <DialogTitle className="sr-only">
-              {propertyName} - Image {selectedIndex + 1} of {displayImages.length}
+              {propertyName} - Image {selectedIndex + 1} of {validImages.length}
             </DialogTitle>
             <div className="relative w-full h-[85vh] bg-black">
               <Image
@@ -131,10 +139,14 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
                 sizes={getResponsiveSizes("lightbox")}
                 quality={getOptimizedQuality("lightbox", deviceType)}
                 priority
+                onError={() => {
+                  handleImageError(selectedIndex);
+                  closeLightbox();
+                }}
               />
               
               {/* Navigation Buttons */}
-              {displayImages.length > 1 && (
+              {validImages.length > 1 && (
                 <>
                   <Button
                     variant="ghost"
@@ -170,7 +182,7 @@ export function PropertyGallery({ images, coverImage, propertyName }: PropertyGa
               
               {/* Image Counter */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-                {selectedIndex + 1} / {displayImages.length}
+                {validImages.findIndex(img => displayImages.indexOf(img) === selectedIndex) + 1} / {validImages.length}
               </div>
             </div>
           </DialogContent>

@@ -1,10 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { getResponsiveSizes, getOptimizedQuality } from "@/lib/utils/image-optimization";
 
@@ -40,6 +42,7 @@ export function PropertyCard({
   projectedAnnualYieldPct,
   className,
 }: PropertyCardProps) {
+  const [imageError, setImageError] = useState(false);
   const investedShares = totalShares - availableShares;
   const fundingPercentage = (investedShares / totalShares) * 100;
 
@@ -52,7 +55,7 @@ export function PropertyCard({
     >
       <Link href={`/properties/${slug}`} className="block">
         <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
-          {coverImage ? (
+          {coverImage && !imageError ? (
             <Image
               src={coverImage}
               alt={name}
@@ -61,10 +64,11 @@ export function PropertyCard({
               sizes={getResponsiveSizes("propertyCard")}
               quality={getOptimizedQuality("propertyCard", "mobile")}
               loading="lazy"
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              No Image
+              <span className="text-sm">No Image Available</span>
             </div>
           )}
           <div className="absolute top-2 right-2">
