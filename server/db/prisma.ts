@@ -10,10 +10,24 @@ const globalForPrisma = globalThis as unknown as {
  * Uses singleton pattern to prevent multiple instances in development
  * 
  * Prisma 6.x reads DATABASE_URL directly from environment variables.
- * Ensure DATABASE_URL is set in your .env file.
+ * This code prioritizes DATABASE_PUBLIC_URL (for Railway) over DATABASE_URL.
  * 
  * This uses lazy initialization to avoid requiring DATABASE_URL during build time.
  */
+
+// Set DATABASE_URL early if DATABASE_PUBLIC_URL is available
+// This ensures Prisma uses the correct URL from the start
+if (process.env.DATABASE_PUBLIC_URL) {
+  const publicUrl = process.env.DATABASE_PUBLIC_URL.trim();
+  if (publicUrl && publicUrl.length > 0 && 
+      publicUrl !== 'undefined' && 
+      !publicUrl.includes('undefined') &&
+      (publicUrl.startsWith('postgresql://') || publicUrl.startsWith('postgres://'))) {
+    // Override DATABASE_URL with public URL for Railway deployments
+    process.env.DATABASE_URL = publicUrl;
+  }
+}
+
 function getDatabaseUrl(): string {
   // Priority 1: Use Railway public TCP proxy connection (for Railway deployments)
   if (process.env.DATABASE_PUBLIC_URL) {
