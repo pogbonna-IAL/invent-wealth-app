@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { isAdmin } from "@/server/services/admin.service";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
