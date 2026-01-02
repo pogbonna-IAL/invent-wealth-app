@@ -46,6 +46,8 @@ export default async function DashboardOverviewPage() {
     redirect("/auth/signin");
   }
 
+  // Admin redirect is handled in dashboard layout
+
   // Wrap all database queries in try-catch to prevent crashes
   let isOnboardingComplete = false;
   let portfolio = {

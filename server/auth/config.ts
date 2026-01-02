@@ -322,6 +322,28 @@ export const authOptions: NextAuthConfig = {
 
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      // Handle redirects after authentication (email link, credentials, etc.)
+      // The dashboard layout will check admin status and redirect accordingly
+      
+      // If url is relative, make it absolute
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // If url is absolute and same origin, allow it
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.origin === baseUrl) {
+          return url;
+        }
+      } catch {
+        // Invalid URL, use baseUrl
+      }
+      
+      // Default to baseUrl if url is invalid or external
+      return baseUrl;
+    },
     async jwt({ token, user, account }) {
       // Initial sign in
       if (user) {
