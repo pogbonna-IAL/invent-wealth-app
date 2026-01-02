@@ -71,13 +71,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 # Switch to non-root user
 USER nextjs
 
-# Expose port (Railway will set PORT environment variable)
-# Next.js standalone mode automatically uses PORT env var, so we don't need to set it here
+# Expose port (Railway will set PORT environment variable dynamically)
+# Next.js standalone mode automatically uses PORT env var
 EXPOSE 3000
 
+# Set hostname to 0.0.0.0 to listen on all interfaces (required for Railway)
 ENV HOSTNAME="0.0.0.0"
+ENV PORT="${PORT:-3000}"
 
 # Use standalone server (server.js is in the root of standalone output)
 # Next.js standalone automatically uses PORT environment variable from Railway
+# Railway sets PORT dynamically, so we use the env var directly
 CMD ["node", "server.js"]
 
