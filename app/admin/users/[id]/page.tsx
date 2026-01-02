@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SendPasswordResetButton } from "@/components/admin/users/send-password-reset-button";
+import { DeleteUserButton } from "@/components/admin/users/delete-user-button";
 
 export default async function AdminUserDetailPage({
   params,
@@ -221,6 +222,15 @@ export default async function AdminUserDetailPage({
               Edit User
             </Button>
           </Link>
+          {user.role !== "ADMIN" && (
+            <DeleteUserButton
+              userId={user.id}
+              userEmail={user.email}
+              userName={user.name}
+              variant="destructive"
+              size="default"
+            />
+          )}
         </div>
       </div>
 

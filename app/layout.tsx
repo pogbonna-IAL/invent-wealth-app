@@ -6,6 +6,7 @@ import { SessionProvider } from "@/components/providers/session-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SWRegister } from "./sw-register";
+import { Toaster } from "sonner";
 
 // Using Inter for a more premium, welcoming feel
 const inter = Inter({
@@ -62,6 +63,7 @@ export default function RootLayout({
               {children}
               <InstallPrompt />
               <SWRegister />
+              <Toaster />
             </SessionProvider>
           </ThemeProvider>
         </ErrorBoundary>

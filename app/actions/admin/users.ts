@@ -225,3 +225,59 @@ export async function sendPasswordResetEmail(userId: string) {
   }
 }
 
+export async function deleteUser(userId: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await requireAdmin(session.user.id);
+
+    // Prevent deleting yourself
+    if (session.user.id === userId) {
+      return { success: false, error: "You cannot delete your own account" };
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Prevent deleting other admin users (optional safety check)
+    if (user.role === "ADMIN") {
+      return { success: false, error: "Cannot delete admin users" };
+    }
+
+    // Delete user (cascade will handle related records)
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "USER_DELETED",
+        metadata: {
+          deletedUserId: userId,
+          deletedUserEmail: user.email,
+        },
+      },
+    });
+
+    return { success: true, message: "User deleted successfully" };
+  } catch (error) {
+    console.error("Delete user error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete user",
+    };
+  }
+}
+

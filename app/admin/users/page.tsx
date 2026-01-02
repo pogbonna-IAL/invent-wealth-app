@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FileText, Edit } from "lucide-react";
 import { format } from "date-fns";
+import { DeleteUserButton } from "@/components/admin/users/delete-user-button";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,13 @@ export default async function AdminUsersPage() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         </Link>
+                        {user.role !== "ADMIN" && (
+                          <DeleteUserButton
+                            userId={user.id}
+                            userEmail={user.email}
+                            userName={user.name}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
