@@ -76,11 +76,10 @@ USER nextjs
 EXPOSE 3000
 
 # Set hostname to 0.0.0.0 to listen on all interfaces (required for Railway)
+# Railway sets PORT at runtime, Next.js standalone will use it automatically
 ENV HOSTNAME="0.0.0.0"
-ENV PORT="${PORT:-3000}"
 
 # Use standalone server (server.js is in the root of standalone output)
 # Next.js standalone automatically uses PORT environment variable from Railway
-# Railway sets PORT dynamically, so we use the env var directly
 CMD ["node", "server.js"]
 
