@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, PropertyStatus, DistributionStatus, PayoutStatus, InvestmentStatus } from "@prisma/client";
 
 // Get database URL (prioritize DATABASE_PUBLIC_URL for Railway proxy connections)
 function getDatabaseUrl(): string {
@@ -175,52 +175,61 @@ async function main() {
     const shortletModel = shortletModels[i % shortletModels.length];
     const slug = slugify(name);
 
+    // Use smaller values to ensure we stay well within DECIMAL(12,2) limits
     const totalShares = [5000, 7500, 10000, 12500][i % 4];
-    const pricePerShare = 60000.00; // NGN60,000.00 per share (stored as NGN)
-    // Calculate targetRaise, ensuring it doesn't exceed DECIMAL(12,2) limit (9,999,999,999.99)
-    // Max safe value: 9,999,999,999.99 (10^10 - 0.01)
+    const pricePerShare = 50000.00; // NGN50,000.00 per share (reduced from 60k for safety)
+    // Calculate targetRaise, ensuring it doesn't exceed DECIMAL(12,2) limit
+    // DECIMAL(12,2) max is 9,999,999,999.99 (must be < 10^10)
+    // Use a conservative max to avoid any precision/rounding issues
+    const maxAllowedValue = 9999999999.00; // Well below the theoretical max
     const calculatedTargetRaise = Number(totalShares) * Number(pricePerShare);
-    const maxAllowedValue = 9999999999.99;
-    const targetRaise = calculatedTargetRaise > maxAllowedValue 
-      ? maxAllowedValue 
-      : Number(calculatedTargetRaise.toFixed(2)); // Round to 2 decimal places
+    
+    // Cap the value and round to 2 decimal places
+    const targetRaise = Math.min(
+      Math.round(calculatedTargetRaise * 100) / 100, // Round to 2 decimals
+      maxAllowedValue // Cap at max
+    );
     const availableShares = Math.floor(totalShares * (0.3 + Math.random() * 0.5)); // 30-80% available
     const projectedYield = [7.5, 8.0, 8.5, 9.0, 9.5, 10.0][i % 6];
 
-    const property = await prisma.property.create({
-      data: {
-        slug,
-        name,
-        city: cityData.city,
-        country: cityData.country,
-        addressShort: `${i + 1} ${cityData.city} Street`,
-        description: `A beautiful ${propertyType.toLowerCase()} located in the heart of ${cityData.city}. This property offers modern amenities, excellent location, and strong rental potential. Perfect for short-term rentals with high occupancy rates.`,
-        highlights: [
-          "Prime location",
-          "Modern amenities",
-          "High rental yield",
-          "Professional management",
-          "Fully furnished",
-        ],
-        coverImage: `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
-        gallery: [
-          `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
-          `https://images.unsplash.com/photo-${1500000000001 + i}?w=800`,
-          `https://images.unsplash.com/photo-${1500000000002 + i}?w=800`,
-        ],
-        propertyType,
-        shortletModel,
-        totalShares,
-        availableShares,
-        pricePerShare,
-        minShares: [10, 5, 20, 15][i % 4],
-        targetRaise,
-        status: availableShares > totalShares * 0.2 ? "OPEN" : "FUNDED",
-        projectedAnnualYieldPct: projectedYield,
-      },
+    const propertyData = {
+      slug,
+      name,
+      city: cityData.city,
+      country: cityData.country,
+      addressShort: `${i + 1} ${cityData.city} Street`,
+      description: `A beautiful ${propertyType.toLowerCase()} located in the heart of ${cityData.city}. This property offers modern amenities, excellent location, and strong rental potential. Perfect for short-term rentals with high occupancy rates.`,
+      highlights: [
+        "Prime location",
+        "Modern amenities",
+        "High rental yield",
+        "Professional management",
+        "Fully furnished",
+      ],
+      coverImage: `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
+      gallery: [
+        `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
+        `https://images.unsplash.com/photo-${1500000000001 + i}?w=800`,
+        `https://images.unsplash.com/photo-${1500000000002 + i}?w=800`,
+      ],
+      propertyType,
+      shortletModel,
+      totalShares,
+      availableShares,
+      pricePerShare,
+      minShares: [10, 5, 20, 15][i % 4],
+      targetRaise,
+      status: availableShares > totalShares * 0.2 ? PropertyStatus.OPEN : PropertyStatus.FUNDED,
+      projectedAnnualYieldPct: projectedYield,
+    };
+
+    const property = await prisma.property.upsert({
+      where: { slug },
+      update: propertyData,
+      create: propertyData,
     });
     properties.push(property);
-    console.log(`✅ Created property: ${property.name} (${property.slug})`);
+    console.log(`✅ Created/Updated property: ${property.name} (${property.slug})`);
   }
 
   // Create investments for some users
@@ -244,7 +253,7 @@ async function main() {
         shares,
         pricePerShareAtPurchase: property.pricePerShare,
         totalAmount,
-        status: "CONFIRMED",
+        status: InvestmentStatus.CONFIRMED,
       },
     });
     console.log(`✅ Created investment: User ${user.email} → ${shares} shares in ${property.name}`);
@@ -306,7 +315,7 @@ async function main() {
           rentalStatementId: rentalStatement.id,
           declaredAt: periodEnd,
           totalDistributed: netDistributable,
-          status: monthOffset <= 2 ? "PAID" : "DECLARED", // Last 3 months paid
+          status: monthOffset <= 2 ? DistributionStatus.PAID : DistributionStatus.DECLARED, // Last 3 months paid
         },
       });
 
@@ -314,7 +323,7 @@ async function main() {
       const investments = await prisma.investment.findMany({
         where: {
           propertyId: property.id,
-          status: "CONFIRMED",
+          status: InvestmentStatus.CONFIRMED,
         },
       });
 
@@ -334,7 +343,7 @@ async function main() {
             rentalStatementId: rentalStatement.id,
             sharesAtRecord: investment.shares,
             amount: payoutAmount,
-            status: monthOffset <= 2 ? "PAID" : "PENDING",
+            status: monthOffset <= 2 ? PayoutStatus.PAID : PayoutStatus.PENDING,
             paidAt: monthOffset <= 2 ? periodEnd : null,
           },
         });
@@ -349,7 +358,7 @@ async function main() {
   // Create transactions
   console.log("\n💳 Creating transactions...");
   const investments = await prisma.investment.findMany({
-    where: { status: "CONFIRMED" },
+    where: { status: InvestmentStatus.CONFIRMED },
   });
 
   for (const investment of investments) {
@@ -365,7 +374,7 @@ async function main() {
   }
 
   const payouts = await prisma.payout.findMany({
-    where: { status: "PAID" },
+    where: { status: PayoutStatus.PAID },
   });
 
   for (const payout of payouts) {
@@ -447,14 +456,17 @@ async function main() {
   // Create referral codes
   console.log("\n🎁 Creating referral codes...");
   for (const user of users.slice(0, 3)) {
-    await prisma.referralCode.create({
-      data: {
+    const code = `REF${user.id.slice(0, 8).toUpperCase()}`;
+    await prisma.referralCode.upsert({
+      where: { userId: user.id },
+      update: { code },
+      create: {
         userId: user.id,
-        code: `REF${user.id.slice(0, 8).toUpperCase()}`,
+        code,
       },
     });
   }
-  console.log("✅ Created referral codes");
+  console.log("✅ Created/Updated referral codes");
 
   // Create audit logs
   console.log("\n📝 Creating audit logs...");
