@@ -1,5 +1,4 @@
 import { auth } from "@/server/auth";
-import { redirect } from "next/navigation";
 import { isAdmin } from "@/server/services/admin.service";
 import { NextResponse } from "next/server";
 
@@ -11,29 +10,36 @@ import { NextResponse } from "next/server";
  */
 export async function GET(request: Request) {
   try {
+    // Get proper base URL from request or environment
+    const requestUrl = new URL(request.url);
+    const baseUrl = process.env.NEXTAUTH_URL || requestUrl.origin;
+    
+    // Ensure baseUrl doesn't contain 0.0.0.0 in production
+    let finalBaseUrl = baseUrl;
+    if (process.env.NODE_ENV === "production") {
+      if (baseUrl.includes("0.0.0.0") || baseUrl.includes("localhost")) {
+        // Use NEXTAUTH_URL or RAILWAY_PUBLIC_DOMAIN
+        finalBaseUrl = process.env.NEXTAUTH_URL || 
+                      (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : baseUrl);
+      }
+    }
+
+    // Get session
     const session = await auth();
 
     if (!session?.user?.id) {
       // If no session, redirect to sign in
-      // Use NEXTAUTH_URL if available, otherwise use request URL
-      const baseUrl = process.env.NEXTAUTH_URL || new URL(request.url).origin;
-      return NextResponse.redirect(new URL("/auth/signin", baseUrl));
+      return NextResponse.redirect(new URL("/auth/signin", finalBaseUrl));
     }
 
-    // Get proper base URL (use NEXTAUTH_URL or request origin)
-    const baseUrl = process.env.NEXTAUTH_URL || new URL(request.url).origin;
-    
-    // Ensure baseUrl doesn't contain 0.0.0.0 in production
-    let finalBaseUrl = baseUrl;
-    if (process.env.NODE_ENV === "production" && baseUrl.includes("0.0.0.0")) {
-      // Use NEXTAUTH_URL or RAILWAY_PUBLIC_DOMAIN
-      finalBaseUrl = process.env.NEXTAUTH_URL || 
-                    (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : baseUrl);
-    }
-
-    // Check if user is admin
+    // Check if user is admin (with timeout to prevent hanging)
     try {
-      const userIsAdmin = await isAdmin(session.user.id);
+      const adminCheckPromise = isAdmin(session.user.id);
+      const timeoutPromise = new Promise<boolean>((resolve) => 
+        setTimeout(() => resolve(false), 5000)
+      );
+      
+      const userIsAdmin = await Promise.race([adminCheckPromise, timeoutPromise]);
       
       if (userIsAdmin) {
         return NextResponse.redirect(new URL("/admin", finalBaseUrl));
@@ -47,9 +53,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/dashboard", finalBaseUrl));
   } catch (error) {
     console.error("[Auth Callback] Error:", error);
-    // Fallback: use NEXTAUTH_URL or request origin
-    const fallbackUrl = process.env.NEXTAUTH_URL || new URL(request.url).origin;
-    return NextResponse.redirect(new URL("/dashboard", fallbackUrl));
+    // Fallback: redirect to sign in on error
+    try {
+      const requestUrl = new URL(request.url);
+      const fallbackUrl = process.env.NEXTAUTH_URL || requestUrl.origin;
+      return NextResponse.redirect(new URL("/auth/signin", fallbackUrl));
+    } catch {
+      // If all else fails, return a simple response
+      return NextResponse.json({ error: "Authentication error" }, { status: 500 });
+    }
   }
 }
 

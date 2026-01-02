@@ -339,14 +339,35 @@ export const authOptions: NextAuthConfig = {
                         (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : properBaseUrl);
         }
         
-        // If redirecting to dashboard, use callback handler instead
+        // Parse the URL to check pathname
+        let urlPathname = "";
+        try {
+          const urlObj = new URL(url);
+          urlPathname = urlObj.pathname;
+        } catch {
+          // If URL parsing fails, treat as relative path
+          urlPathname = url.startsWith("/") ? url : `/${url}`;
+        }
+        
+        // ALWAYS redirect dashboard-related paths to callback handler
         // This prevents ERR_FAILED by checking admin status before loading dashboard
-        if (url.includes("/dashboard") || url === baseUrl || url === `${baseUrl}/` || url === finalBaseUrl || url === `${finalBaseUrl}/`) {
+        if (urlPathname.includes("/dashboard") || 
+            urlPathname === "/" || 
+            urlPathname === "" ||
+            url.includes("/dashboard") ||
+            url === baseUrl || 
+            url === `${baseUrl}/` || 
+            url === finalBaseUrl || 
+            url === `${finalBaseUrl}/`) {
           return `${finalBaseUrl}/auth/callback`;
         }
         
         // If url is relative, make it absolute using proper base URL
         if (url.startsWith("/")) {
+          // Check if it's a dashboard path
+          if (url.includes("/dashboard")) {
+            return `${finalBaseUrl}/auth/callback`;
+          }
           return `${finalBaseUrl}${url}`;
         }
         
@@ -354,13 +375,13 @@ export const authOptions: NextAuthConfig = {
         try {
           const urlObj = new URL(url);
           const baseUrlObj = new URL(finalBaseUrl);
+          // If same origin and going to dashboard, redirect to callback
+          if (urlObj.pathname.includes("/dashboard")) {
+            return `${finalBaseUrl}/auth/callback`;
+          }
           // If same origin, allow it
           if (urlObj.origin === baseUrlObj.origin) {
             return url;
-          }
-          // If different origin but going to dashboard, redirect to callback
-          if (urlObj.pathname.includes("/dashboard")) {
-            return `${finalBaseUrl}/auth/callback`;
           }
         } catch {
           // Invalid URL format, use callback handler
