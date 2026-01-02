@@ -3,6 +3,7 @@
 import { prisma } from "@/server/db/prisma";
 import { UserService } from "@/server/services/user.service";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 const signUpSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -26,13 +27,17 @@ export async function signUp(data: z.infer<typeof signUpSchema>) {
       };
     }
 
-    // Create new user
+    // Hash the password
+    const passwordHash = await bcrypt.hash(validated.password, 10);
+
+    // Create new user with hashed password
     const user = await prisma.user.create({
       data: {
         email: validated.email,
         name: validated.name || validated.email.split("@")[0],
         role: "INVESTOR",
         emailVerified: new Date(), // Auto-verify for credentials signup
+        passwordHash, // Store hashed password
         profile: {
           create: {},
         },

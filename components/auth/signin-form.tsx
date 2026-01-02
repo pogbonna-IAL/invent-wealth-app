@@ -151,6 +151,9 @@ export function SignInForm() {
         return;
       }
 
+      // Wait a moment for database transaction to complete before signing in
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // After successful signup, automatically sign in
       const signInResult = await signIn("credentials", {
         email: signUpEmail.trim(),
@@ -160,8 +163,13 @@ export function SignInForm() {
       });
 
       if (signInResult?.error) {
-        setError("Account created but sign in failed. Please try signing in manually.");
+        console.error("Auto sign-in error after signup:", signInResult.error);
+        setError("Account created successfully! Please sign in manually with your email and password.");
         setIsSignUpLoading(false);
+        // Clear password fields for security
+        setSignUpPassword("");
+        setSignUpConfirmPassword("");
+        return;
       } else if (signInResult?.ok) {
         // Check if user is admin and redirect accordingly
         try {
