@@ -28,6 +28,8 @@ const providers = [
       },
     },
     from: process.env.SMTP_FROM || "noreply@inventwealth.com",
+    // Use callback handler as default redirect to prevent ERR_FAILED
+    // The redirect callback will handle admin/user routing
   }),
   CredentialsProvider({
     id: "credentials",
