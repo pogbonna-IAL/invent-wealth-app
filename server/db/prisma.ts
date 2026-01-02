@@ -63,7 +63,41 @@ function getDatabaseUrl(): string {
 // Lazy initialization - only create connection when actually needed
 function createPrismaClient(): PrismaClient {
   // Get the database URL (prioritizes DATABASE_PUBLIC_URL for Railway)
-  const databaseUrl = getDatabaseUrl();
+  let databaseUrl = getDatabaseUrl();
+  
+  // Add connection pool parameters to prevent connection exhaustion
+  // Railway PostgreSQL has connection limits, so we need to manage the pool carefully
+  try {
+    const url = new URL(databaseUrl);
+    
+    // Set connection pool parameters (only if not already set)
+    // connection_limit: Maximum number of connections in the pool (Railway free tier allows ~20)
+    // pool_timeout: Timeout in seconds for getting a connection from the pool
+    // connect_timeout: Timeout in seconds for establishing a connection
+    if (!url.searchParams.has("connection_limit")) {
+      url.searchParams.set("connection_limit", "10");
+    }
+    if (!url.searchParams.has("pool_timeout")) {
+      url.searchParams.set("pool_timeout", "10");
+    }
+    if (!url.searchParams.has("connect_timeout")) {
+      url.searchParams.set("connect_timeout", "10");
+    }
+    
+    // Ensure SSL is required (Railway requires SSL)
+    if (!url.searchParams.has("sslmode")) {
+      url.searchParams.set("sslmode", "require");
+    }
+    
+    databaseUrl = url.toString();
+  } catch (error) {
+    // If URL parsing fails, log and use original URL
+    console.error("Failed to parse database URL for connection pool configuration:", error);
+    // Still ensure SSL mode is set if missing
+    if (!databaseUrl.includes("sslmode=")) {
+      databaseUrl += (databaseUrl.includes("?") ? "&" : "?") + "sslmode=require";
+    }
+  }
   
   // Set DATABASE_URL for Prisma (Prisma 6.x reads from environment)
   // This ensures Prisma uses the correct URL
@@ -153,9 +187,9 @@ function getPrismaClient(): PrismaClient {
 
   const client = createPrismaClient();
   
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
+  // Cache the client in both development and production to prevent multiple instances
+  // This is critical for connection pool management
+  globalForPrisma.prisma = client;
   
   return client;
 }
