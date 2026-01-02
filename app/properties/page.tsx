@@ -19,31 +19,49 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PropertiesPage() {
-  const properties = await PropertyService.getProperties();
+  let properties: any[] = [];
+  let propertiesWithAvailableShares: any[] = [];
 
-  // Calculate availableShares dynamically for each property
-  const { prisma } = await import("@/server/db/prisma");
-  const propertiesWithAvailableShares = await Promise.all(
-    properties.map(async (property) => {
-      // Get total confirmed investments for this property
-      const totalInvestedShares = await prisma.investment.aggregate({
-        where: {
-          propertyId: property.id,
-          status: "CONFIRMED",
-        },
-        _sum: {
-          shares: true,
-        },
-      });
-      const investedShares = totalInvestedShares._sum.shares || 0;
-      const availableShares = property.totalShares - investedShares;
+  try {
+    properties = await PropertyService.getProperties();
 
-      return {
-        ...property,
-        availableShares, // Use dynamically calculated value
-      };
-    })
-  );
+    // Calculate availableShares dynamically for each property
+    const { prisma } = await import("@/server/db/prisma");
+    propertiesWithAvailableShares = await Promise.all(
+      properties.map(async (property) => {
+        try {
+          // Get total confirmed investments for this property
+          const totalInvestedShares = await prisma.investment.aggregate({
+            where: {
+              propertyId: property.id,
+              status: "CONFIRMED",
+            },
+            _sum: {
+              shares: true,
+            },
+          });
+          const investedShares = totalInvestedShares._sum.shares || 0;
+          const availableShares = property.totalShares - investedShares;
+
+          return {
+            ...property,
+            availableShares, // Use dynamically calculated value
+          };
+        } catch (error) {
+          console.error(`Error calculating shares for property ${property.id}:`, error);
+          // Return property with totalShares as availableShares if calculation fails
+          return {
+            ...property,
+            availableShares: property.totalShares,
+          };
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Properties page error:", error);
+    // Continue with empty array - will show "No properties available" message
+    propertiesWithAvailableShares = [];
+  }
 
   // Serialize Decimal fields to numbers for client components
   const serializedProperties = propertiesWithAvailableShares.map((property) => ({

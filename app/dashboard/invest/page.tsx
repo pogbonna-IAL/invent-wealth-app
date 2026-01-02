@@ -18,33 +18,53 @@ export default async function InvestPage() {
     redirect("/auth/signin");
   }
 
-  const isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
-  const properties = await PropertyService.getProperties("OPEN" as any);
+  let isOnboardingComplete = false;
+  let properties: any[] = [];
+  let propertiesWithAvailableShares: any[] = [];
 
-  // Calculate availableShares dynamically for each property
-  const { prisma } = await import("@/server/db/prisma");
-  const propertiesWithAvailableShares = await Promise.all(
-    properties.map(async (property) => {
-      // Get total confirmed investments for this property
-      const totalInvestedShares = await prisma.investment.aggregate({
-        where: {
-          propertyId: property.id,
-          status: "CONFIRMED",
-        },
-        _sum: {
-          shares: true,
-        },
-      });
-      const investedShares = totalInvestedShares._sum.shares || 0;
-      const availableShares = property.totalShares - investedShares;
+  try {
+    isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
+    properties = await PropertyService.getProperties("OPEN" as any);
 
-      return {
-        ...property,
-        availableShares, // Use dynamically calculated value
-        investedShares,
-      };
-    })
-  );
+    // Calculate availableShares dynamically for each property
+    const { prisma } = await import("@/server/db/prisma");
+    propertiesWithAvailableShares = await Promise.all(
+      properties.map(async (property) => {
+        try {
+          // Get total confirmed investments for this property
+          const totalInvestedShares = await prisma.investment.aggregate({
+            where: {
+              propertyId: property.id,
+              status: "CONFIRMED",
+            },
+            _sum: {
+              shares: true,
+            },
+          });
+          const investedShares = totalInvestedShares._sum.shares || 0;
+          const availableShares = property.totalShares - investedShares;
+
+          return {
+            ...property,
+            availableShares, // Use dynamically calculated value
+            investedShares,
+          };
+        } catch (error) {
+          console.error(`Error calculating shares for property ${property.id}:`, error);
+          // Return property with totalShares as availableShares if calculation fails
+          return {
+            ...property,
+            availableShares: property.totalShares,
+            investedShares: 0,
+          };
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Dashboard invest page error:", error);
+    // Continue with empty arrays - will show "No properties" message
+    propertiesWithAvailableShares = [];
+  }
 
   return (
     <div className="space-y-8">
