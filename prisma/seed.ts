@@ -175,9 +175,13 @@ async function main() {
     const shortletModel = shortletModels[i % shortletModels.length];
     const slug = slugify(name);
 
-    const totalShares = [50000, 75000, 100000, 125000][i % 4];
-    const pricePerShare = 600000.00; // NGN600,000.00 per share (stored as NGN)
-    const targetRaise = Number(totalShares) * Number(pricePerShare);
+    const totalShares = [5000, 7500, 10000, 12500][i % 4];
+    const pricePerShare = 60000.00; // NGN60,000.00 per share (stored as NGN)
+    // Calculate targetRaise, ensuring it doesn't exceed DECIMAL(12,2) limit (9,999,999,999.99)
+    const targetRaise = Math.min(
+      Number(totalShares) * Number(pricePerShare),
+      9999999999.99 // Max value for DECIMAL(12,2)
+    );
     const availableShares = Math.floor(totalShares * (0.3 + Math.random() * 0.5)); // 30-80% available
     const projectedYield = [7.5, 8.0, 8.5, 9.0, 9.5, 10.0][i % 6];
 
