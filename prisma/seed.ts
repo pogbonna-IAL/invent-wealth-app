@@ -61,6 +61,32 @@ const shortletModels = ["ENTIRE_HOME", "PRIVATE_ROOM"] as const;
 async function main() {
   console.log("🌱 Seeding database...");
 
+  // Check if passwordHash column exists in the database
+  let hasPasswordHashColumn = false;
+  try {
+    const result = await prisma.$queryRaw<Array<{ column_name: string }>>`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'User' AND column_name = 'passwordHash'
+    `;
+    hasPasswordHashColumn = result.length > 0;
+  } catch (error: any) {
+    console.log('⚠️  Could not check for passwordHash column:', error.message);
+  }
+
+  if (!hasPasswordHashColumn) {
+    console.log('');
+    console.log('⚠️  WARNING: passwordHash column not found in database');
+    console.log('   The seed script requires the passwordHash column to exist.');
+    console.log('   Please run the migration first:');
+    console.log('   npm run db:migrate:deploy');
+    console.log('');
+    console.log('   Or if using Railway:');
+    console.log('   railway run npm run db:migrate:deploy');
+    console.log('');
+    throw new Error('passwordHash column does not exist. Please run migrations first.');
+  }
+
   // Create test users
   const users = [];
   for (let i = 1; i <= 5; i++) {
