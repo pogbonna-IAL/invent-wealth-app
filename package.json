@@ -16,6 +16,7 @@
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:migrate:deploy": "tsx scripts/run-migrations.ts",
+    "db:migrate:resolve": "tsx scripts/resolve-failed-migration.ts",
     "db:studio": "npx prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "test:e2e": "playwright test"
