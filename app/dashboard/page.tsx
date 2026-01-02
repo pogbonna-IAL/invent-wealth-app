@@ -46,26 +46,47 @@ export default async function DashboardOverviewPage() {
     redirect("/auth/signin");
   }
 
-  const isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
-  const portfolio = await InvestmentService.getPortfolioSummary(session.user.id);
-  
-  // Get additional data for enhanced dashboard
-  const portfolioValueOverTime = await InvestmentService.getPortfolioValueOverTime(session.user.id);
-  const incomeDistributionsOverTime = await DistributionService.getIncomeDistributionsOverTime(session.user.id);
-  const allocationByCity = await InvestmentService.getPortfolioAllocationByCity(session.user.id);
-  const allocationByPropertyType = await InvestmentService.getPortfolioAllocationByPropertyType(session.user.id);
-  const nextDistributionDate = await DistributionService.getNextExpectedDistributionDate(session.user.id);
-  
-  // Get recent transactions
-  const recentTransactions = await prisma.transaction.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 10,
-  });
+  // Wrap all database queries in try-catch to prevent crashes
+  let isOnboardingComplete = false;
+  let portfolio = {
+    currentValue: 0,
+    totalInvested: 0,
+    totalIncome: 0,
+    holdingsDetails: [] as any[],
+    payouts: [] as any[],
+  };
+  let portfolioValueOverTime: any[] = [];
+  let incomeDistributionsOverTime: any[] = [];
+  let allocationByCity: any[] = [];
+  let allocationByPropertyType: any[] = [];
+  let nextDistributionDate: Date | null = null;
+  let recentTransactions: any[] = [];
+
+  try {
+    isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
+    portfolio = await InvestmentService.getPortfolioSummary(session.user.id);
+    
+    // Get additional data for enhanced dashboard
+    portfolioValueOverTime = await InvestmentService.getPortfolioValueOverTime(session.user.id);
+    incomeDistributionsOverTime = await DistributionService.getIncomeDistributionsOverTime(session.user.id);
+    allocationByCity = await InvestmentService.getPortfolioAllocationByCity(session.user.id);
+    allocationByPropertyType = await InvestmentService.getPortfolioAllocationByPropertyType(session.user.id);
+    nextDistributionDate = await DistributionService.getNextExpectedDistributionDate(session.user.id);
+    
+    // Get recent transactions
+    recentTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10,
+    });
+  } catch (error) {
+    console.error("Dashboard data loading error:", error);
+    // Continue with empty/default values instead of crashing
+  }
 
   // Serialize Decimal fields to numbers for client components
   const serializedTransactions = recentTransactions.map((transaction) => ({
@@ -74,7 +95,7 @@ export default async function DashboardOverviewPage() {
   }));
 
   // Serialize payouts Decimal fields to numbers
-  const serializedPayouts = portfolio.payouts.map((payout) => ({
+  const serializedPayouts = (portfolio.payouts || []).map((payout) => ({
     id: payout.id,
     userId: payout.userId,
     propertyId: payout.propertyId,
