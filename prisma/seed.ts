@@ -178,10 +178,12 @@ async function main() {
     const totalShares = [5000, 7500, 10000, 12500][i % 4];
     const pricePerShare = 60000.00; // NGN60,000.00 per share (stored as NGN)
     // Calculate targetRaise, ensuring it doesn't exceed DECIMAL(12,2) limit (9,999,999,999.99)
-    const targetRaise = Math.min(
-      Number(totalShares) * Number(pricePerShare),
-      9999999999.99 // Max value for DECIMAL(12,2)
-    );
+    // Max safe value: 9,999,999,999.99 (10^10 - 0.01)
+    const calculatedTargetRaise = Number(totalShares) * Number(pricePerShare);
+    const maxAllowedValue = 9999999999.99;
+    const targetRaise = calculatedTargetRaise > maxAllowedValue 
+      ? maxAllowedValue 
+      : Number(calculatedTargetRaise.toFixed(2)); // Round to 2 decimal places
     const availableShares = Math.floor(totalShares * (0.3 + Math.random() * 0.5)); // 30-80% available
     const projectedYield = [7.5, 8.0, 8.5, 9.0, 9.5, 10.0][i % 6];
 
@@ -228,13 +230,20 @@ async function main() {
     const property = properties[i];
     const shares = property.minShares * (2 + i); // Invest 2-4x minimum
 
+    // Calculate totalAmount, ensuring it doesn't exceed DECIMAL(12,2) limit
+    const maxAllowedValue = 9999999999.99;
+    const calculatedTotalAmount = Number(property.pricePerShare) * shares;
+    const totalAmount = calculatedTotalAmount > maxAllowedValue 
+      ? maxAllowedValue 
+      : Number(calculatedTotalAmount.toFixed(2));
+
     const investment = await prisma.investment.create({
       data: {
         userId: user.id,
         propertyId: property.id,
         shares,
         pricePerShareAtPurchase: property.pricePerShare,
-        totalAmount: Number(property.pricePerShare) * shares,
+        totalAmount,
         status: "CONFIRMED",
       },
     });
@@ -254,11 +263,26 @@ async function main() {
       // Generate realistic rental data
       const baseRevenue = 50000 + Math.random() * 30000; // 50k-80k
       const occupancyRate = 65 + Math.random() * 25; // 65-90%
-      const grossRevenue = baseRevenue * (occupancyRate / 100);
-      const operatingCosts = grossRevenue * (0.15 + Math.random() * 0.1); // 15-25% of revenue
-      const managementFee = grossRevenue * 0.1; // 10% management fee
-      const netDistributable = grossRevenue - operatingCosts - managementFee;
-      const adr = grossRevenue / 30; // Average daily rate
+      const maxAllowedValue = 9999999999.99;
+      
+      // Calculate values and ensure they don't exceed DECIMAL(12,2) limit
+      const grossRevenue = Math.min(
+        Number((baseRevenue * (occupancyRate / 100)).toFixed(2)),
+        maxAllowedValue
+      );
+      const operatingCosts = Math.min(
+        Number((grossRevenue * (0.15 + Math.random() * 0.1)).toFixed(2)),
+        maxAllowedValue
+      );
+      const managementFee = Math.min(
+        Number((grossRevenue * 0.1).toFixed(2)),
+        maxAllowedValue
+      );
+      const netDistributable = Math.min(
+        Number((grossRevenue - operatingCosts - managementFee).toFixed(2)),
+        maxAllowedValue
+      );
+      const adr = Number((grossRevenue / 30).toFixed(2)); // Average daily rate
 
       const rentalStatement = await prisma.rentalStatement.create({
         data: {
@@ -295,7 +319,12 @@ async function main() {
       });
 
       for (const investment of investments) {
-        const payoutAmount = (Number(investment.shares) / property.totalShares) * netDistributable;
+        // Calculate payout amount, ensuring it doesn't exceed DECIMAL(12,2) limit
+        const maxAllowedValue = 9999999999.99;
+        const calculatedPayoutAmount = (Number(investment.shares) / property.totalShares) * netDistributable;
+        const payoutAmount = calculatedPayoutAmount > maxAllowedValue 
+          ? maxAllowedValue 
+          : Number(calculatedPayoutAmount.toFixed(2));
         
         await prisma.payout.create({
           data: {
