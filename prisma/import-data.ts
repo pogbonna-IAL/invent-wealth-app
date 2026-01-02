@@ -147,7 +147,10 @@ async function importData() {
     throw new Error(`Summary file not found: ${summaryPath}\nPlease run 'npm run db:export' first.`);
   }
 
-  const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8'));
+  const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8')) as {
+    exportedAt: string;
+    counts: Record<string, number>;
+  };
   console.log(`📊 Found export from ${new Date(summary.exportedAt).toLocaleString()}`);
   console.log(`   Ready to import ${Object.values(summary.counts).reduce((a: number, b: number) => a + b, 0)} records\n`);
 
