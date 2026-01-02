@@ -35,6 +35,9 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
+// Check for reset flag
+const shouldReset = process.argv.includes('--reset') || process.argv.includes('-r');
+
 // Helper function to generate slug from name
 function slugify(text: string): string {
   return text
@@ -58,8 +61,98 @@ const cities = [
 const propertyTypes = ["APARTMENT", "VILLA", "STUDIO", "HOUSE", "CONDO", "TOWNHOUSE"] as const;
 const shortletModels = ["ENTIRE_HOME", "PRIVATE_ROOM"] as const;
 
+// Function to clear all data (in correct order to respect foreign keys)
+async function clearDatabase() {
+  console.log("🗑️  Clearing existing data...");
+  
+  // Delete in reverse order of dependencies
+  await prisma.payoutAuditLog.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.transaction.deleteMany();
+  await prisma.payout.deleteMany();
+  await prisma.distribution.deleteMany();
+  await prisma.rentalStatement.deleteMany();
+  await prisma.document.deleteMany();
+  await prisma.referralSignup.deleteMany();
+  await prisma.referralCode.deleteMany();
+  await prisma.investment.deleteMany();
+  await prisma.property.deleteMany();
+  await prisma.onboarding.deleteMany();
+  await prisma.profile.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.verificationToken.deleteMany();
+  await prisma.user.deleteMany();
+  
+  console.log("✅ Database cleared");
+}
+
+// Function to check and include existing test data
+async function findExistingTestData() {
+  console.log("🔍 Checking for existing test data...");
+  
+  const existingUsers = await prisma.user.findMany({
+    where: {
+      email: {
+        not: {
+          in: [
+            "pogbonna@gmail.com",
+            "user1@example.com",
+            "user2@example.com",
+            "user3@example.com",
+            "user4@example.com",
+            "user5@example.com",
+          ],
+        },
+      },
+    },
+    include: {
+      profile: true,
+      onboarding: true,
+    },
+  });
+
+  const existingProperties = await prisma.property.findMany({
+    where: {
+      slug: {
+        not: {
+          in: [
+            "luxury-beachfront-villa-lekki",
+            "modern-apartment-victoria-island",
+            "executive-studio-ikoyi",
+            "premium-condo-abuja",
+            "spacious-house-port-harcourt",
+            "townhouse-ibadan",
+            "boutique-villa-calabar",
+            "city-apartment-kano",
+            "waterfront-villa-lagos",
+            "garden-house-abuja",
+            "skyline-condo-lagos",
+            "heritage-villa-port-harcourt",
+          ],
+        },
+      },
+    },
+  });
+
+  console.log(`   Found ${existingUsers.length} existing test users`);
+  console.log(`   Found ${existingProperties.length} existing test properties`);
+
+  return { existingUsers, existingProperties };
+}
+
 async function main() {
   console.log("🌱 Seeding database...");
+
+  // Reset database if flag is set
+  if (shouldReset) {
+    console.log("\n⚠️  RESET MODE: All existing data will be deleted!");
+    await clearDatabase();
+  } else {
+    // Check for existing test data
+    const { existingUsers, existingProperties } = await findExistingTestData();
+    console.log(`\n📝 Note: Found ${existingUsers.length} test users and ${existingProperties.length} test properties that will be preserved.\n`);
+  }
 
   // Check if passwordHash column exists in the database
   let hasPasswordHashColumn = false;
@@ -119,7 +212,16 @@ async function main() {
       },
     });
     users.push(user);
-    console.log(`✅ Created user: ${user.email}`);
+    console.log(`✅ Created/Updated user: ${user.email}`);
+  }
+
+  // Include existing test users if not resetting
+  if (!shouldReset) {
+    const { existingUsers } = await findExistingTestData();
+    users.push(...existingUsers);
+    if (existingUsers.length > 0) {
+      console.log(`✅ Included ${existingUsers.length} existing test users`);
+    }
   }
 
   // Create admin user for development login (admin/admin123)
@@ -232,7 +334,17 @@ async function main() {
     console.log(`✅ Created/Updated property: ${property.name} (${property.slug})`);
   }
 
-  // Create investments for some users
+  // Include existing test properties if not resetting
+  if (!shouldReset) {
+    const { existingProperties } = await findExistingTestData();
+    properties.push(...existingProperties);
+    if (existingProperties.length > 0) {
+      console.log(`✅ Included ${existingProperties.length} existing test properties`);
+    }
+  }
+
+  // Create investments for some users (only if resetting, to avoid duplicates)
+  if (shouldReset) {
   console.log("\n📊 Creating investments...");
   for (let i = 0; i < 3; i++) {
     const user = users[i];
@@ -258,8 +370,10 @@ async function main() {
     });
     console.log(`✅ Created investment: User ${user.email} → ${shares} shares in ${property.name}`);
   }
+  }
 
-  // Create 6 months of rental statements for first 5 properties
+  // Create 6 months of rental statements for first 5 properties (only if resetting)
+  if (shouldReset) {
   console.log("\n💰 Creating rental statements...");
   const now = new Date();
   for (let propIndex = 0; propIndex < 5; propIndex++) {
@@ -354,8 +468,10 @@ async function main() {
       );
     }
   }
+  }
 
-  // Create transactions
+  // Create transactions (only if resetting)
+  if (shouldReset) {
   console.log("\n💳 Creating transactions...");
   const investments = await prisma.investment.findMany({
     where: { status: InvestmentStatus.CONFIRMED },
@@ -389,8 +505,10 @@ async function main() {
     });
   }
   console.log(`✅ Created ${investments.length + payouts.length} transactions`);
+  }
 
-  // Create documents
+  // Create documents (only if resetting)
+  if (shouldReset) {
   console.log("\n📄 Creating documents...");
   
   // Global documents
@@ -452,6 +570,7 @@ async function main() {
     });
   }
   console.log("✅ Created documents");
+  }
 
   // Create referral codes
   console.log("\n🎁 Creating referral codes...");
@@ -468,7 +587,8 @@ async function main() {
   }
   console.log("✅ Created/Updated referral codes");
 
-  // Create audit logs
+  // Create audit logs (only if resetting)
+  if (shouldReset) {
   console.log("\n📝 Creating audit logs...");
   await prisma.auditLog.createMany({
     data: [
@@ -489,17 +609,25 @@ async function main() {
     ],
   });
   console.log("✅ Created audit logs");
+  }
 
   console.log("\n✨ Seeding completed successfully!");
   console.log(`\n📊 Summary:`);
   console.log(`   - ${users.length + 1} users (${users.length} investors, 1 admin)`);
   console.log(`   - ${properties.length} properties`);
-  console.log(`   - ${investments.length} investments`);
-  console.log(`   - ${await prisma.rentalStatement.count()} rental statements`);
-  console.log(`   - ${await prisma.distribution.count()} distributions`);
-  console.log(`   - ${await prisma.payout.count()} payouts`);
-  console.log(`   - ${await prisma.transaction.count()} transactions`);
-  console.log(`   - ${await prisma.document.count()} documents`);
+  if (shouldReset) {
+    const investments = await prisma.investment.findMany({
+      where: { status: InvestmentStatus.CONFIRMED },
+    });
+    console.log(`   - ${investments.length} investments`);
+    console.log(`   - ${await prisma.rentalStatement.count()} rental statements`);
+    console.log(`   - ${await prisma.distribution.count()} distributions`);
+    console.log(`   - ${await prisma.payout.count()} payouts`);
+    console.log(`   - ${await prisma.transaction.count()} transactions`);
+    console.log(`   - ${await prisma.document.count()} documents`);
+  } else {
+    console.log(`   - (Run with --reset flag to see full statistics)`);
+  }
 }
 
 main()

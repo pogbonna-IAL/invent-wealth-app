@@ -19,6 +19,11 @@
     "db:migrate:resolve": "tsx scripts/resolve-failed-migration.ts",
     "db:studio": "npx prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:reset": "tsx prisma/seed.ts --reset",
+    "db:check": "tsx prisma/check-data.ts",
+    "db:export": "tsx prisma/export-data.ts",
+    "db:import": "tsx prisma/import-data.ts",
+    "db:import:reset": "tsx prisma/import-data.ts --reset",
     "test:e2e": "playwright test"
   },
   "dependencies": {
