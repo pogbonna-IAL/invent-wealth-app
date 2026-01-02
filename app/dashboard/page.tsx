@@ -40,16 +40,17 @@ import { formatCurrencyNGN } from "@/lib/utils/currency";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardOverviewPage() {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  if (!session?.user?.id) {
-    redirect("/auth/signin");
-  }
+    if (!session?.user?.id) {
+      redirect("/auth/signin");
+    }
 
-  // Admin redirect is handled in dashboard layout
+    // Admin redirect is handled in dashboard layout
 
-  // Wrap all database queries in try-catch to prevent crashes
-  let isOnboardingComplete = false;
+    // Wrap all database queries in try-catch to prevent crashes
+    let isOnboardingComplete = false;
   let portfolio = {
     currentValue: 0,
     totalInvested: 0,
@@ -91,43 +92,69 @@ export default async function DashboardOverviewPage() {
   }
 
   // Serialize Decimal fields to numbers for client components
-  const serializedTransactions = recentTransactions.map((transaction) => ({
+  const serializedTransactions = (recentTransactions || []).map((transaction) => ({
     ...transaction,
-    amount: Number(transaction.amount),
+    amount: Number(transaction.amount || 0),
   }));
 
-  // Serialize payouts Decimal fields to numbers
-  const serializedPayouts = (portfolio.payouts || []).map((payout) => ({
-    id: payout.id,
-    userId: payout.userId,
-    propertyId: payout.propertyId,
-    distributionId: payout.distributionId,
-    rentalStatementId: payout.rentalStatementId,
-    sharesAtRecord: payout.sharesAtRecord,
-    amount: Number(payout.amount),
-    status: payout.status,
-    paidAt: payout.paidAt instanceof Date ? payout.paidAt.toISOString() : payout.paidAt,
-    paymentMethod: payout.paymentMethod,
-    paymentReference: payout.paymentReference,
-    bankAccount: payout.bankAccount,
-    notes: payout.notes,
-    createdAt: payout.createdAt instanceof Date ? payout.createdAt.toISOString() : payout.createdAt,
-    updatedAt: payout.updatedAt instanceof Date ? payout.updatedAt.toISOString() : payout.updatedAt,
-    property: {
-      id: payout.property.id,
-      name: payout.property.name,
-      slug: payout.property.slug,
-    },
-    rentalStatement: {
-      id: payout.rentalStatement.id,
-      periodStart: payout.rentalStatement.periodStart instanceof Date 
-        ? payout.rentalStatement.periodStart.toISOString() 
-        : payout.rentalStatement.periodStart,
-      periodEnd: payout.rentalStatement.periodEnd instanceof Date 
-        ? payout.rentalStatement.periodEnd.toISOString() 
-        : payout.rentalStatement.periodEnd,
-    },
-  }));
+  // Serialize payouts Decimal fields to numbers with safe property access
+  const serializedPayouts = (portfolio.payouts || []).map((payout) => {
+    try {
+      return {
+        id: payout.id,
+        userId: payout.userId,
+        propertyId: payout.propertyId,
+        distributionId: payout.distributionId || null,
+        rentalStatementId: payout.rentalStatementId || null,
+        sharesAtRecord: payout.sharesAtRecord || 0,
+        amount: Number(payout.amount || 0),
+        status: payout.status || "PENDING",
+        paidAt: payout.paidAt instanceof Date ? payout.paidAt.toISOString() : payout.paidAt || null,
+        paymentMethod: payout.paymentMethod || null,
+        paymentReference: payout.paymentReference || null,
+        bankAccount: payout.bankAccount || null,
+        notes: payout.notes || null,
+        createdAt: payout.createdAt instanceof Date ? payout.createdAt.toISOString() : payout.createdAt || new Date().toISOString(),
+        updatedAt: payout.updatedAt instanceof Date ? payout.updatedAt.toISOString() : payout.updatedAt || new Date().toISOString(),
+        property: payout.property ? {
+          id: payout.property.id || "",
+          name: payout.property.name || "Unknown Property",
+          slug: payout.property.slug || "",
+        } : { id: "", name: "Unknown Property", slug: "" },
+        rentalStatement: payout.rentalStatement ? {
+          id: payout.rentalStatement.id || "",
+          periodStart: payout.rentalStatement.periodStart instanceof Date 
+            ? payout.rentalStatement.periodStart.toISOString() 
+            : payout.rentalStatement.periodStart || new Date().toISOString(),
+          periodEnd: payout.rentalStatement.periodEnd instanceof Date 
+            ? payout.rentalStatement.periodEnd.toISOString() 
+            : payout.rentalStatement.periodEnd || new Date().toISOString(),
+        } : { id: "", periodStart: new Date().toISOString(), periodEnd: new Date().toISOString() },
+      };
+    } catch (payoutError) {
+      console.error("Error serializing payout:", payoutError, payout);
+      // Return minimal safe payout object
+      return {
+        id: payout.id || "",
+        userId: payout.userId || "",
+        propertyId: payout.propertyId || "",
+        distributionId: null,
+        rentalStatementId: null,
+        sharesAtRecord: 0,
+        amount: 0,
+        status: "PENDING",
+        paidAt: null,
+        paymentMethod: null,
+        paymentReference: null,
+        bankAccount: null,
+        notes: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        property: { id: "", name: "Unknown Property", slug: "" },
+        rentalStatement: { id: "", periodStart: new Date().toISOString(), periodEnd: new Date().toISOString() },
+      };
+    }
+  });
 
   return (
     <div className="space-y-8">
@@ -297,5 +324,26 @@ export default async function DashboardOverviewPage() {
       )}
     </div>
   );
+  } catch (error) {
+    console.error("Dashboard page error:", error);
+    // Return a minimal error state instead of crashing
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">
+            We encountered an error loading your dashboard. Please try refreshing the page.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              Unable to load dashboard data. Please try again later or contact support if the problem persists.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 }
 

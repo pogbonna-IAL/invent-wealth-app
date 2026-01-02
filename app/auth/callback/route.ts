@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     try {
       const adminCheckPromise = isAdmin(session.user.id);
       const timeoutPromise = new Promise<boolean>((resolve) => 
-        setTimeout(() => resolve(false), 5000)
+        setTimeout(() => resolve(false), 3000)
       );
       
       const userIsAdmin = await Promise.race([adminCheckPromise, timeoutPromise]);
@@ -46,11 +46,13 @@ export async function GET(request: Request) {
       }
     } catch (adminError) {
       console.error("[Auth Callback] Error checking admin status:", adminError);
-      // Continue to dashboard if admin check fails
+      // Continue to dashboard if admin check fails - don't block the redirect
     }
 
     // Regular users go to dashboard
-    return NextResponse.redirect(new URL("/dashboard", finalBaseUrl));
+    // Use a relative URL to avoid any domain resolution issues
+    const dashboardUrl = new URL("/dashboard", finalBaseUrl);
+    return NextResponse.redirect(dashboardUrl);
   } catch (error) {
     console.error("[Auth Callback] Error:", error);
     // Fallback: redirect to sign in on error
