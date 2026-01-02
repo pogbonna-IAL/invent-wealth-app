@@ -15,15 +15,29 @@ const globalForPrisma = globalThis as unknown as {
  * This uses lazy initialization to avoid requiring DATABASE_URL during build time.
  */
 function getDatabaseUrl(): string {
+  // Priority 1: Use Railway public TCP proxy connection (for Railway deployments)
+  if (process.env.DATABASE_PUBLIC_URL) {
+    const url = process.env.DATABASE_PUBLIC_URL.trim();
+    if (url && url.length > 0 && url !== 'undefined' && !url.includes('undefined')) {
+      // Validate URL format
+      if (url.startsWith('postgresql://') || url.startsWith('postgres://')) {
+        return url;
+      }
+    }
+  }
+  
+  // Priority 2: Fall back to standard DATABASE_URL
   const url = process.env.DATABASE_URL;
   if (!url) {
     const errorMessage = [
-      "DATABASE_URL environment variable is not set.",
+      "DATABASE_URL or DATABASE_PUBLIC_URL environment variable is not set.",
       "",
       "To fix this:",
       "1. Create a .env file in the project root (copy from .env.example if available)",
       "2. Set DATABASE_URL with your PostgreSQL connection string",
       "   Example: DATABASE_URL=postgresql://user:password@localhost:5432/dbname",
+      "",
+      "For Railway deployments, set DATABASE_PUBLIC_URL for public TCP proxy connection.",
       "",
       "See README.md for more setup instructions.",
     ].join("\n");
@@ -34,9 +48,12 @@ function getDatabaseUrl(): string {
 
 // Lazy initialization - only create connection when actually needed
 function createPrismaClient(): PrismaClient {
-  // Prisma 6.x reads DATABASE_URL from environment automatically via schema.prisma
-  // We just need to ensure it's set (checked by getDatabaseUrl)
-  getDatabaseUrl();
+  // Get the database URL (prioritizes DATABASE_PUBLIC_URL for Railway)
+  const databaseUrl = getDatabaseUrl();
+  
+  // Set DATABASE_URL for Prisma (Prisma 6.x reads from environment)
+  // This ensures Prisma uses the correct URL
+  process.env.DATABASE_URL = databaseUrl;
 
   return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
