@@ -11,6 +11,7 @@ import { SocialShare } from "@/components/marketing/social-share";
 import { Badge } from "@/components/ui/badge";
 import { Shield, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { SignupSuccessBanner } from "@/components/auth/signup-success-banner";
 
 export const metadata: Metadata = {
@@ -40,7 +41,9 @@ export default function Home() {
       <OrganizationSchema />
       <WebsiteSchema />
       <MarketingLayout>
-        <SignupSuccessBanner />
+        <Suspense fallback={null}>
+          <SignupSuccessBanner />
+        </Suspense>
         <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative container mx-auto px-4 py-20 md:py-32 text-center overflow-hidden">
