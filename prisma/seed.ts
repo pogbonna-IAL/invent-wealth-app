@@ -1,12 +1,39 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set");
+// Get database URL (prioritize DATABASE_PUBLIC_URL for Railway proxy connections)
+function getDatabaseUrl(): string {
+  // Priority 1: Use Railway public TCP proxy connection
+  if (process.env.DATABASE_PUBLIC_URL) {
+    const url = process.env.DATABASE_PUBLIC_URL.trim();
+    if (url && url.length > 0) {
+      console.log('✓ Using DATABASE_PUBLIC_URL for seeding');
+      return url;
+    }
+  }
+  
+  // Priority 2: Fall back to standard DATABASE_URL
+  if (process.env.DATABASE_URL) {
+    const url = process.env.DATABASE_URL.trim();
+    if (url && url.length > 0) {
+      return url;
+    }
+  }
+  
+  throw new Error(
+    "DATABASE_URL or DATABASE_PUBLIC_URL environment variable is not set.\n" +
+    "Please set one of these variables to connect to your database."
+  );
 }
 
+// Set DATABASE_URL for Prisma Client
+const databaseUrl = getDatabaseUrl();
+process.env.DATABASE_URL = databaseUrl;
+
 // Create Prisma Client (Prisma 6.x reads DATABASE_URL from environment automatically)
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 
 // Helper function to generate slug from name
 function slugify(text: string): string {
@@ -407,6 +434,22 @@ async function main() {
 main()
   .catch((e) => {
     console.error("❌ Error seeding database:", e);
+    
+    // Provide helpful error messages
+    if (e instanceof Error) {
+      if (e.message.includes('DATABASE_URL')) {
+        console.error('\n💡 Tip: Make sure DATABASE_URL or DATABASE_PUBLIC_URL is set in your environment variables.');
+      } else if (e.message.includes('Can\'t reach') || e.message.includes('P1001')) {
+        console.error('\n💡 Tip: Check your database connection. Ensure:');
+        console.error('   - Database service is running');
+        console.error('   - DATABASE_URL or DATABASE_PUBLIC_URL is correct');
+        console.error('   - Network connectivity is available');
+      } else if (e.message.includes('PrismaClientInitializationError')) {
+        console.error('\n💡 Tip: Try running: npx prisma generate');
+        console.error('   This regenerates Prisma Client with the latest schema.');
+      }
+    }
+    
     process.exit(1);
   })
   .finally(async () => {
