@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { PushNotificationButton } from "@/components/pwa/push-notification-button";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function NotificationsSettings() {
   const [settings, setSettings] = useState({
@@ -29,13 +30,16 @@ export function NotificationsSettings() {
       });
 
       if (!response.ok) {
-        // Silently fail - notifications are not critical
-        // API endpoint doesn't exist yet, but UI remains functional
+        const data = await response.json().catch(() => ({}));
+        const errorMessage = data.error || "Failed to save notification preferences";
+        toast.error(errorMessage);
         return;
       }
+
+      toast.success("Notification preferences saved successfully!");
     } catch (err) {
-      // Silently fail - notifications are not critical
-      // API endpoint doesn't exist yet, but UI remains functional
+      const errorMessage = err instanceof Error ? err.message : "Failed to save notification preferences";
+      toast.error(errorMessage);
     }
   };
 

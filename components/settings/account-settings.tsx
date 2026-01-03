@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,12 +40,17 @@ export function AccountSettings({ userId }: AccountSettingsProps) {
       const result = await softDeleteAccount();
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to deactivate account");
+        const errorMessage = "error" in result ? result.error : "Failed to deactivate account";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Account deactivated successfully");
       router.push("/auth/signin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
       setIsDeleting(false);
     }
   };
@@ -62,12 +68,17 @@ export function AccountSettings({ userId }: AccountSettingsProps) {
       const result = await deleteAccount();
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to delete account");
+        const errorMessage = "error" in result ? result.error : "Failed to delete account";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Account deleted successfully");
       router.push("/auth/signin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
       setIsDeleting(false);
     }
   };

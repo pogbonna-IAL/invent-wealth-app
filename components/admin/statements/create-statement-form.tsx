@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,13 +202,18 @@ export function CreateStatementForm({ properties }: CreateStatementFormProps) {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create statement");
+        const errorMessage = data.error || "Failed to create statement";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
-      router.push("/admin/statements");
+      toast.success("Rental statement created successfully!");
+      router.push("/admin/statements?success=statement_created");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

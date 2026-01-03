@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,13 +108,19 @@ export function EditPropertyForm({ property }: EditPropertyFormProps) {
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to update property");
+        const errorMessage = "error" in result ? result.error : "Failed to update property";
+        toast.error(errorMessage);
+        setError(errorMessage);
+        return;
       }
 
-      router.push("/admin/properties");
+      toast.success("Property updated successfully!");
       router.refresh();
+      // Stay on edit page to show updated data
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

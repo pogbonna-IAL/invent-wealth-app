@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { createInvestment } from "@/app/actions/investment";
 import Link from "next/link";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
+import { toast } from "sonner";
 
 interface InvestmentFlowProps {
   property: {
@@ -105,13 +106,19 @@ export function InvestmentFlow({ property, userId }: InvestmentFlowProps) {
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Investment failed");
+        const errorMessage = "error" in result ? result.error : "Investment failed";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Investment created successfully!");
       // Redirect to dashboard with success message
       router.push(`/dashboard?success=investment_created&investmentId=${result.investmentId}`);
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred. Please try again.";
+      toast.error(errorMessage);
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };

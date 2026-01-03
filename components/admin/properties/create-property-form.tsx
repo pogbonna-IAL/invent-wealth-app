@@ -13,6 +13,7 @@ import { Loader2, ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
 import { PropertyType, ShortletModel, PropertyStatus } from "@prisma/client";
 import Image from "next/image";
+import { toast } from "sonner";
 
 const propertyTypes = [
   "APARTMENT",
@@ -262,12 +263,19 @@ export function CreatePropertyForm() {
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to create property");
+        const errorMessage = "error" in result ? result.error : "Failed to create property";
+        toast.error(errorMessage);
+        setError(errorMessage);
+        return;
       }
 
-      router.push(`/admin/properties/${result.propertyId}/edit`);
+      toast.success("Property created successfully!");
+      router.push(`/admin/properties/${result.propertyId}/edit?success=property_created`);
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

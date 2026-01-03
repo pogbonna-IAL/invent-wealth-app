@@ -7,6 +7,7 @@ import { OnboardingStep2 } from "./step-2-risk";
 import { OnboardingStep3 } from "./step-3-terms";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface OnboardingWizardProps {
   initialProfile?: {
@@ -94,14 +95,19 @@ export function OnboardingWizard({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to complete onboarding");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to complete onboarding";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
-      router.push("/dashboard");
+      toast.success("Onboarding completed successfully!");
+      router.push("/dashboard?success=onboarding_completed");
       router.refresh();
     } catch (error) {
       console.error("Onboarding error:", error);
-      alert("Failed to complete onboarding. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to complete onboarding. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Send, FileCheck } from "lucide-react";
 import {
@@ -52,12 +53,17 @@ export function DistributionApprovalButtons({
       const result = await submitDistributionForApproval({ distributionId });
 
       if (result.success) {
+        toast.success("Distribution submitted for approval successfully!");
         router.refresh();
       } else {
-        setError(("error" in result && result.error) ? result.error : "Failed to submit for approval");
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to submit for approval";
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -74,12 +80,17 @@ export function DistributionApprovalButtons({
       });
 
       if (result.success) {
+        toast.success("Distribution approved successfully!");
         router.refresh();
       } else {
-        setError(("error" in result && result.error) ? result.error : "Failed to approve distribution");
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to approve distribution";
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -96,12 +107,17 @@ export function DistributionApprovalButtons({
       });
 
       if (result.success) {
+        toast.success("Distribution rejected successfully!");
         router.refresh();
       } else {
-        setError(("error" in result && result.error) ? result.error : "Failed to reject distribution");
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to reject distribution";
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -115,12 +131,17 @@ export function DistributionApprovalButtons({
       const result = await declareDistribution({ distributionId });
 
       if (result.success) {
+        toast.success("Distribution declared successfully!");
         router.refresh();
       } else {
-        setError(("error" in result && result.error) ? result.error : "Failed to declare distribution");
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to declare distribution";
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

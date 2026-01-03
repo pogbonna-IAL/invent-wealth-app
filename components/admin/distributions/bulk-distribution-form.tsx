@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -174,18 +175,22 @@ export function BulkDistributionForm({ properties, recentStatements }: BulkDistr
       }
 
       if (results.length > 0) {
-        setSuccess(
-          `Successfully created ${results.length} distribution(s). ${errors.length > 0 ? `Errors: ${errors.length}` : ""}`
-        );
+        const successMessage = `Successfully created ${results.length} distribution(s). ${errors.length > 0 ? `Errors: ${errors.length}` : ""}`;
+        toast.success(successMessage);
+        setSuccess(successMessage);
         setTimeout(() => {
-          router.push("/admin/distributions");
+          router.push("/admin/distributions?success=distributions_created");
           router.refresh();
         }, 2000);
       } else {
-        setError(`Failed to create distributions. Errors: ${errors.join("; ")}`);
+        const errorMessage = `Failed to create distributions. Errors: ${errors.join("; ")}`;
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsCreating(false);
     }

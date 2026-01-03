@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function SecuritySettings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -51,12 +52,15 @@ export function SecuritySettings() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to change password");
+        const errorMessage = data.error || "Failed to change password";
+        toast.error(errorMessage);
+        setError(errorMessage);
         setIsLoading(false);
         return;
       }
 
       // Success - reset form
+      toast.success("Password changed successfully");
       setSuccess("Password changed successfully");
       setIsChangingPassword(false);
       setPasswordData({
@@ -69,7 +73,9 @@ export function SecuritySettings() {
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      const errorMessage = "An error occurred. Please try again.";
+      toast.error(errorMessage);
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

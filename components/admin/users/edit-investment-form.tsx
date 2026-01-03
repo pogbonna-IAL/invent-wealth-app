@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,13 +59,19 @@ export function EditInvestmentForm({ investment }: EditInvestmentFormProps) {
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to update investment");
+        const errorMessage = "error" in result ? result.error : "Failed to update investment";
+        toast.error(errorMessage);
+        setError(errorMessage);
+        return;
       }
 
-      router.push(`/admin/users/${investment.userId}`);
+      toast.success("Investment updated successfully!");
+      router.push(`/admin/users/${investment.userId}?success=investment_updated`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

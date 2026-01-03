@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,14 +62,19 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       const result = await updateProfile(formData);
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to update profile");
+        const errorMessage = "error" in result ? result.error : "Failed to update profile";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Profile updated successfully!");
       setSuccess(true);
       router.refresh();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

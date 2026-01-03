@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,13 +87,18 @@ export function InvestmentForm({ property }: InvestmentFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Investment failed");
+        const errorMessage = errorData.error || "Investment failed";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Investment created successfully!");
       router.refresh();
-      router.push("/dashboard");
+      router.push("/dashboard?success=investment_created");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

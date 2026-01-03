@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -236,13 +237,18 @@ export function EditStatementForm({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to update statement");
+        const errorMessage = data.error || "Failed to update statement";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
-      router.push(`/admin/statements/${statement.id}`);
+      toast.success("Rental statement updated successfully!");
+      router.push(`/admin/statements/${statement.id}?success=statement_updated`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

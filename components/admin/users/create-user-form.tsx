@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,11 +97,16 @@ export function CreateUserForm() {
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to create user");
+        const errorMessage = "error" in result ? result.error : "Failed to create user";
+        toast.error(errorMessage);
+        setError(errorMessage);
+        return;
       }
 
       // Show success message
-      setSuccess(`User "${formData.name}" (${formData.email}) created successfully!`);
+      const successMessage = `User "${formData.name}" (${formData.email}) created successfully!`;
+      toast.success(successMessage);
+      setSuccess(successMessage);
 
       // Reset form fields
       resetForm();
@@ -111,6 +117,7 @@ export function CreateUserForm() {
       // Stay on the same page to allow creating another user
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);

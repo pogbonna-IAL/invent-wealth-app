@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -52,16 +53,20 @@ export function DeleteDistributionButton({
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to delete distribution");
+        const errorMessage = "error" in result ? result.error : "Failed to delete distribution";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
+      toast.success("Distribution deleted successfully");
       setSuccess("Distribution deleted successfully");
       setTimeout(() => {
-        router.push("/admin/distributions");
+        router.push("/admin/distributions?success=distribution_deleted");
         router.refresh();
       }, 1500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete distribution";
+      toast.error(errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);

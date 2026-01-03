@@ -194,6 +194,14 @@ build-info.json
 # pnpm-lock.yaml
 
 # ============================================
+# Uploaded Media Files
+# ============================================
+# User-uploaded images and videos
+public/uploads/
+public/images/properties/
+public/videos/
+
+# ============================================
 # Misc
 # ============================================
 # PM2

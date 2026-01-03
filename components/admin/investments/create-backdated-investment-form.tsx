@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +104,10 @@ export function CreateBackdatedInvestmentForm({
       });
 
       if (!result.success) {
-        throw new Error("error" in result ? result.error : "Failed to create investment");
+        const errorMessage = "error" in result ? result.error : "Failed to create investment";
+        toast.error(errorMessage);
+        setError(errorMessage);
+        return;
       }
 
       // Get user and property names for success message
@@ -113,9 +117,9 @@ export function CreateBackdatedInvestmentForm({
       const propertyName = property?.name || "Unknown Property";
 
       // Show success message
-      setSuccess(
-        `Investment created successfully! ${formData.shares} shares for ${propertyName} - ${formatCurrencyNGN(totalAmount, "NGN")}`
-      );
+      const successMessage = `Investment created successfully! ${formData.shares} shares for ${propertyName} - ${formatCurrencyNGN(totalAmount, "NGN")}`;
+      toast.success(successMessage);
+      setSuccess(successMessage);
 
       // Reset form fields
       resetForm();
@@ -126,6 +130,7 @@ export function CreateBackdatedInvestmentForm({
       // Stay on the same page to allow creating another investment
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);
