@@ -56,21 +56,21 @@ export default async function AdminUsersOverviewPage() {
     (user) => user.investments.length > 0
   ).length;
 
-  const totalInvested = users.reduce((sum, user) => {
+  const totalInvested = users.reduce((sum: number, user: any) => {
     return (
       sum +
       user.investments.reduce(
-        (userSum, inv) => userSum + Number(inv.totalAmount),
+        (userSum: number, inv: any) => userSum + Number(inv.totalAmount),
         0
       )
     );
   }, 0);
 
-  const totalIncomeReceived = users.reduce((sum, user) => {
+  const totalIncomeReceived = users.reduce((sum: number, user: any) => {
     return (
       sum +
       user.payouts.reduce(
-        (userSum, payout) => userSum + Number(payout.amount),
+        (userSum: number, payout: any) => userSum + Number(payout.amount),
         0
       )
     );

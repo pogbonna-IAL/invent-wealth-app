@@ -169,8 +169,8 @@ export default async function AdminUsersPage() {
             {users
               .filter((user) => user.investments.length > 0)
               .slice(0, 10)
-              .map((user) =>
-                user.investments.slice(0, 3).map((investment) => (
+              .map((user: any) =>
+                user.investments.slice(0, 3).map((investment: any) => (
                 <div
                   key={investment.id}
                   className="flex items-center justify-between border-b pb-4 last:border-0"

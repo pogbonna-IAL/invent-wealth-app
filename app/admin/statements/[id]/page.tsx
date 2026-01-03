@@ -247,7 +247,7 @@ export default async function StatementDetailPage({
             <p className="text-sm font-medium mb-3">Operating Cost Breakdown</p>
             {(() => {
               // Group items by category
-              const groupedItems = operatingCostItems.reduce((acc, item) => {
+              const groupedItems = operatingCostItems.reduce((acc: Record<string, typeof operatingCostItems>, item: any) => {
                 const category = item.category || "UNCATEGORIZED";
                 if (!acc[category]) {
                   acc[category] = [];
@@ -270,7 +270,7 @@ export default async function StatementDetailPage({
                     if (!items || items.length === 0) return null;
 
                     const categoryLabel = OPERATING_COST_CATEGORIES[categoryKey as keyof typeof OPERATING_COST_CATEGORIES] || "Uncategorized";
-                    const categoryTotal = items.reduce((sum, item) => sum + item.amount, 0);
+                    const categoryTotal = items.reduce((sum: number, item: any) => sum + item.amount, 0);
 
                     return (
                       <div key={categoryKey} className="border rounded-lg p-3 bg-muted/30">

@@ -175,7 +175,7 @@ export default async function AdminUserDetailPage({
     totalAmount: number;
   };
   
-  const payoutsByProperty = user.payouts.reduce((acc, payout) => {
+  const payoutsByProperty = user.payouts.reduce((acc: Record<string, PayoutGroup>, payout: any) => {
     const propertyId = payout.propertyId;
     if (!acc[propertyId]) {
       acc[propertyId] = {
@@ -196,7 +196,7 @@ export default async function AdminUserDetailPage({
     totalAmount: number;
   };
   
-  const payoutsByMonth = user.payouts.reduce((acc, payout) => {
+  const payoutsByMonth = user.payouts.reduce((acc: Record<string, MonthGroup>, payout: any) => {
     const month = format(payout.createdAt, "yyyy-MM");
     if (!acc[month]) {
       acc[month] = {

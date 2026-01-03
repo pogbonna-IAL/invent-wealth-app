@@ -104,8 +104,8 @@ export default async function DistributionDetailPage({
   const paidPayouts = distribution.payouts.filter((p) => p.status === "PAID").length;
   const pendingPayouts = totalPayouts - paidPayouts;
   const totalPaidAmount = distribution.payouts
-    .filter((p) => p.status === "PAID")
-    .reduce((sum, p) => sum + Number(p.amount), 0);
+    .filter((p: any) => p.status === "PAID")
+    .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
   // Serialize payouts for client component - convert Decimal and Date fields
   const serializedPayouts = distribution.payouts.map((payout) => {

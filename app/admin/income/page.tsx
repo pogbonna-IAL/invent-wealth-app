@@ -65,7 +65,7 @@ export default async function AdminIncomePage() {
   );
 
   // Group by user
-  const incomeByUser = payouts.reduce((acc, payout) => {
+  const incomeByUser = payouts.reduce((acc: any, payout: any) => {
     const userId = payout.userId;
     if (!acc[userId]) {
       acc[userId] = {
@@ -87,7 +87,7 @@ export default async function AdminIncomePage() {
   }, {} as Record<string, { user: typeof payouts[0]["user"]; payouts: typeof payouts; totalAmount: number; paidAmount: number; pendingAmount: number }>);
 
   // Group by property
-  const incomeByProperty = payouts.reduce((acc, payout) => {
+  const incomeByProperty = payouts.reduce((acc: any, payout: any) => {
     const propertyId = payout.propertyId;
     if (!acc[propertyId]) {
       acc[propertyId] = {

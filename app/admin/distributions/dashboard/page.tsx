@@ -48,23 +48,23 @@ export default async function MultiPropertyDistributionDashboard() {
     0
   );
 
-  const totalPayouts = distributions.reduce((sum, d) => sum + d.payouts.length, 0);
+  const totalPayouts = distributions.reduce((sum: number, d: any) => sum + d.payouts.length, 0);
   const paidPayouts = distributions.reduce(
-    (sum, d) => sum + d.payouts.filter((p) => p.status === "PAID").length,
+    (sum: number, d: any) => sum + d.payouts.filter((p: any) => p.status === "PAID").length,
     0
   );
 
-  const totalPaidAmount = distributions.reduce((sum, d) => {
+  const totalPaidAmount = distributions.reduce((sum: number, d: any) => {
     return (
       sum +
       d.payouts
-        .filter((p) => p.status === "PAID")
-        .reduce((pSum, p) => pSum + Number(p.amount), 0)
+        .filter((p: any) => p.status === "PAID")
+        .reduce((pSum: number, p: any) => pSum + Number(p.amount), 0)
     );
   }, 0);
 
   // Group by property
-  const byProperty = distributions.reduce((acc, dist) => {
+  const byProperty = distributions.reduce((acc: any, dist: any) => {
     const propertyId = dist.propertyId;
     if (!acc[propertyId]) {
       acc[propertyId] = {
@@ -79,15 +79,15 @@ export default async function MultiPropertyDistributionDashboard() {
     acc[propertyId].distributions.push(dist);
     acc[propertyId].totalDistributed += Number(dist.totalDistributed);
     acc[propertyId].totalPayouts += dist.payouts.length;
-    acc[propertyId].paidPayouts += dist.payouts.filter((p) => p.status === "PAID").length;
+    acc[propertyId].paidPayouts += dist.payouts.filter((p: any) => p.status === "PAID").length;
     acc[propertyId].totalPaid += dist.payouts
-      .filter((p) => p.status === "PAID")
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+      .filter((p: any) => p.status === "PAID")
+      .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
     return acc;
   }, {} as Record<string, { property: typeof distributions[0]["property"]; distributions: typeof distributions; totalDistributed: number; totalPayouts: number; paidPayouts: number; totalPaid: number }>);
 
   // Group by month
-  const byMonth = distributions.reduce((acc, dist) => {
+  const byMonth = distributions.reduce((acc: any, dist: any) => {
     if (!dist.declaredAt) return acc;
     const monthKey = format(dist.declaredAt, "yyyy-MM");
     if (!acc[monthKey]) {
