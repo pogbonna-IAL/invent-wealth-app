@@ -181,7 +181,7 @@ export default async function AdminIncomePage() {
             {Object.values(incomeByUser)
               .sort((a: any, b: any) => b.totalAmount - a.totalAmount)
               .slice(0, 20)
-              .map((userIncome) => (
+              .map((userIncome: any) => (
                 <div
                   key={userIncome.user.id}
                   className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors"
@@ -229,7 +229,7 @@ export default async function AdminIncomePage() {
           <div className="space-y-4">
             {Object.values(incomeByProperty)
               .sort((a: any, b: any) => b.totalAmount - a.totalAmount)
-              .map((propertyIncome) => (
+              .map((propertyIncome: any) => (
                 <div
                   key={propertyIncome.property.id}
                   className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors"

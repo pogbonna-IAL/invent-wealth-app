@@ -220,7 +220,7 @@ export default async function MultiPropertyDistributionDashboard() {
           <div className="space-y-4">
             {Object.values(byMonth)
               .sort((a: any, b: any) => b.month.localeCompare(a.month))
-              .map((monthData) => (
+              .map((monthData: any) => (
                 <div
                   key={monthData.month}
                   className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors"
