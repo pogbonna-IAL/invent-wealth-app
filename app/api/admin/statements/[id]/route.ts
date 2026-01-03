@@ -33,6 +33,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let id: string = "";
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -41,7 +42,8 @@ export async function PUT(
 
     await requireAdmin(session.user.id);
 
-    const { id } = await params;
+    const resolvedParams = await params;
+    id = resolvedParams.id;
     const body = await request.json();
     const validated = updateStatementSchema.parse(body);
 
@@ -227,7 +229,8 @@ export async function PUT(
     }
 
     console.error("Update statement error:", error);
-    return handleDatabaseErrorResponse(error, `/admin/statements/${id}/edit`);
+    const redirectPath = id ? `/admin/statements/${id}/edit` : "/admin/statements";
+    return handleDatabaseErrorResponse(error, redirectPath);
   }
 }
 
