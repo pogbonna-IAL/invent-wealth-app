@@ -10,30 +10,49 @@ import { prisma } from "@/server/db/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPropertiesPage() {
-  const properties = await PropertyService.getProperties();
-  
-  // Calculate availableShares dynamically for each property
-  const propertiesWithAvailableShares = await Promise.all(
-    properties.map(async (property) => {
-      // Get total confirmed investments for this property
-      const totalInvestedShares = await prisma.investment.aggregate({
-        where: {
-          propertyId: property.id,
-          status: "CONFIRMED",
-        },
-        _sum: {
-          shares: true,
-        },
-      });
-      const investedShares = totalInvestedShares._sum.shares || 0;
-      const availableShares = property.totalShares - investedShares;
+  let properties = [];
+  let propertiesWithAvailableShares = [];
 
-      return {
-        ...property,
-        availableShares, // Use dynamically calculated value
-      };
-    })
-  );
+  try {
+    properties = await PropertyService.getProperties();
+    
+    // Calculate availableShares dynamically for each property
+    propertiesWithAvailableShares = await Promise.all(
+      properties.map(async (property) => {
+        try {
+          // Get total confirmed investments for this property
+          const totalInvestedShares = await prisma.investment.aggregate({
+            where: {
+              propertyId: property.id,
+              status: "CONFIRMED",
+            },
+            _sum: {
+              shares: true,
+            },
+          });
+          const investedShares = totalInvestedShares._sum.shares || 0;
+          const availableShares = property.totalShares - investedShares;
+
+          return {
+            ...property,
+            availableShares, // Use dynamically calculated value
+          };
+        } catch (error) {
+          console.error(`Error calculating shares for property ${property.id}:`, error);
+          // Return property with totalShares as availableShares if calculation fails
+          return {
+            ...property,
+            availableShares: property.totalShares,
+          };
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Admin properties page error:", error);
+    // Return empty array if there's an error fetching properties
+    properties = [];
+    propertiesWithAvailableShares = [];
+  }
 
   return (
     <div className="space-y-8">
@@ -106,12 +125,12 @@ export default async function AdminPropertiesPage() {
                   </td>
                   <td className="p-4">
                     <p className="text-sm">
-                      {property.availableShares.toLocaleString()} / {property.totalShares.toLocaleString()}
+                      {(property.availableShares ?? property.totalShares).toLocaleString()} / {property.totalShares.toLocaleString()}
                     </p>
                   </td>
                   <td className="p-4">
                     <p className="text-sm font-semibold">
-                      {formatCurrencyNGN(Number(property.pricePerShare), "NGN")}
+                      {formatCurrencyNGN(Number(property.pricePerShare) || 0, "NGN")}
                     </p>
                   </td>
                   <td className="p-4">

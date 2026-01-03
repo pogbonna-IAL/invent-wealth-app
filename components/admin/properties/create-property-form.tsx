@@ -437,15 +437,17 @@ export function CreatePropertyForm() {
           <div className="space-y-2">
             <Label htmlFor="coverImage">Cover Image</Label>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="coverImageFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverImageChange}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm text-muted-foreground">or</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex-1 w-full sm:w-auto">
+                  <Input
+                    id="coverImageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverImageChange}
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground self-center">or</span>
                 <Input
                   id="coverImage"
                   type="url"
@@ -458,7 +460,7 @@ export function CreatePropertyForm() {
                     }
                   }}
                   placeholder="https://example.com/image.jpg"
-                  className="flex-1"
+                  className="flex-1 w-full sm:w-auto"
                 />
               </div>
               {coverImagePreview && (
@@ -497,15 +499,17 @@ export function CreatePropertyForm() {
           <div className="space-y-2">
             <Label htmlFor="coverVideo">Cover Video (Alternative to Cover Image)</Label>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="coverVideoFile"
-                  type="file"
-                  accept="video/*"
-                  onChange={handleCoverVideoChange}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm text-muted-foreground">or</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex-1 w-full sm:w-auto">
+                  <Input
+                    id="coverVideoFile"
+                    type="file"
+                    accept="video/*"
+                    onChange={handleCoverVideoChange}
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground self-center">or</span>
                 <Input
                   id="coverVideo"
                   type="url"
@@ -524,7 +528,7 @@ export function CreatePropertyForm() {
                     }
                   }}
                   placeholder="https://example.com/video.mp4"
-                  className="flex-1"
+                  className="flex-1 w-full sm:w-auto"
                 />
               </div>
               {coverVideoPreview && (
@@ -565,16 +569,18 @@ export function CreatePropertyForm() {
           <div className="space-y-2">
             <Label htmlFor="gallery">Gallery Images (1-20 images)</Label>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="galleryFiles"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleGalleryChange}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm text-muted-foreground">or</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex-1 w-full sm:w-auto">
+                  <Input
+                    id="galleryFiles"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryChange}
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground self-center">or</span>
                 <Textarea
                   id="gallery"
                   value={formData.gallery}
@@ -590,7 +596,7 @@ export function CreatePropertyForm() {
                   }}
                   rows={4}
                   placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-                  className="flex-1"
+                  className="flex-1 w-full sm:w-auto"
                 />
               </div>
               <p className="text-xs text-muted-foreground">

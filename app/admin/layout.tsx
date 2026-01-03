@@ -8,18 +8,29 @@ export default async function AdminLayoutWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  if (!session?.user?.id) {
+    if (!session?.user?.id) {
+      redirect("/auth/signin?callbackUrl=/admin");
+    }
+
+    // Check if user is admin with error handling
+    try {
+      const admin = await isAdmin(session.user.id);
+      if (!admin) {
+        redirect("/dashboard?error=unauthorized");
+      }
+    } catch (adminError) {
+      console.error("Error checking admin status:", adminError);
+      // If admin check fails, redirect to dashboard for safety
+      redirect("/dashboard?error=unauthorized");
+    }
+
+    return <AdminLayout user={session.user}>{children}</AdminLayout>;
+  } catch (error) {
+    console.error("Admin layout error:", error);
     redirect("/auth/signin?callbackUrl=/admin");
   }
-
-  // Check if user is admin
-  const admin = await isAdmin(session.user.id);
-  if (!admin) {
-    redirect("/dashboard?error=unauthorized");
-  }
-
-  return <AdminLayout user={session.user}>{children}</AdminLayout>;
 }
 
