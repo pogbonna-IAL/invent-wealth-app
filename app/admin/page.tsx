@@ -9,6 +9,7 @@ import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { handleDatabaseError } from "@/lib/utils/db-error-handler";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,8 @@ export default async function AdminDashboardPage() {
     let totalInvestments = 0;
     let totalDistributions = 0;
     let openProperties = 0;
-    let totalInvested = { _sum: { totalAmount: null as number | null } };
-    let totalIncomeDistributed = { _sum: { amount: null as number | null } };
+    let totalInvested: { _sum: { totalAmount: Prisma.Decimal | null } } = { _sum: { totalAmount: null } };
+    let totalIncomeDistributed: { _sum: { amount: Prisma.Decimal | null } } = { _sum: { amount: null } };
     let totalTransactions = 0;
     let recentTransactions: any[] = [];
     let recentInvestments: any[] = [];
