@@ -3,6 +3,7 @@ import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/server/db/prisma";
+import bcrypt from "bcryptjs";
 
 // PrismaAdapter will be created lazily - prisma client initialization is deferred
 // This allows the build to complete even if DATABASE_URL is not set during build time
@@ -113,7 +114,6 @@ const providers = [
               if (isAdminUsername) {
                 // For "admin"/"admin123" shortcut, verify against stored password
                 if (adminUser.passwordHash) {
-                  const bcrypt = require("bcryptjs");
                   const isValidPassword = await bcrypt.compare(trimmedPassword, adminUser.passwordHash);
                   if (!isValidPassword) {
                     // Set password if it doesn't match (for first-time setup)
@@ -125,7 +125,6 @@ const providers = [
                   }
                 } else {
                   // Set password if not set
-                  const bcrypt = require("bcryptjs");
                   const passwordHash = await bcrypt.hash("admin123", 10);
                   await prismaClient.user.update({
                     where: { id: adminUser.id },
@@ -135,7 +134,6 @@ const providers = [
               } else {
                 // For direct email login, verify password normally
                 if (adminUser.passwordHash) {
-                  const bcrypt = require("bcryptjs");
                   const isValidPassword = await bcrypt.compare(trimmedPassword, adminUser.passwordHash);
                   if (!isValidPassword) {
                     if (isDev) {
@@ -146,7 +144,6 @@ const providers = [
                 } else {
                   // Set default password if not set (for first-time setup)
                   // Use "admin123" as default password for admin email
-                  const bcrypt = require("bcryptjs");
                   const defaultPassword = "admin123";
                   const passwordHash = await bcrypt.hash(defaultPassword, 10);
                   await prismaClient.user.update({
@@ -179,27 +176,59 @@ const providers = [
             } else {
               // Create admin user if it doesn't exist (only for admin username shortcut)
               if (isAdminUsername) {
-                const bcrypt = require("bcryptjs");
-                const passwordHash = await bcrypt.hash("admin123", 10);
-                const newAdmin = await prismaClient.user.create({
-                  data: {
-                    email: "pogbonna@gmail.com",
-                    name: "Admin User",
-                    role: "ADMIN",
-                    passwordHash,
-                    emailVerified: new Date(),
-                  },
-                });
+                try {
+                  const passwordHash = await bcrypt.hash("admin123", 10);
+                  const newAdmin = await prismaClient.user.create({
+                    data: {
+                      email: "pogbonna@gmail.com",
+                      name: "Admin User",
+                      role: "ADMIN",
+                      passwordHash,
+                      emailVerified: new Date(),
+                    },
+                  });
 
-                if (isDev) {
-                  console.log("[Auth] Created admin user for admin login");
+                  if (isDev) {
+                    console.log("[Auth] Created admin user for admin login");
+                  }
+                  return {
+                    id: newAdmin.id,
+                    email: newAdmin.email || undefined,
+                    name: newAdmin.name || undefined,
+                    role: newAdmin.role,
+                  };
+                } catch (createError) {
+                  // User might already exist - try to find and update it
+                  if (isDev) {
+                    console.log("[Auth] Failed to create admin user, trying to find existing:", createError);
+                  }
+                  const existingAdmin = await prismaClient.user.findUnique({
+                    where: { email: "pogbonna@gmail.com" },
+                  });
+                  if (existingAdmin) {
+                    // Update existing user to be admin
+                    const passwordHash = await bcrypt.hash("admin123", 10);
+                    const updatedAdmin = await prismaClient.user.update({
+                      where: { id: existingAdmin.id },
+                      data: {
+                        role: "ADMIN",
+                        passwordHash,
+                        emailVerified: existingAdmin.emailVerified || new Date(),
+                      },
+                    });
+                    return {
+                      id: updatedAdmin.id,
+                      email: updatedAdmin.email || undefined,
+                      name: updatedAdmin.name || undefined,
+                      role: updatedAdmin.role,
+                    };
+                  }
+                  // If we can't create or find the admin user, log and return null
+                  if (isDev) {
+                    console.error("[Auth] Could not create or find admin user:", createError);
+                  }
+                  return null;
                 }
-                return {
-                  id: newAdmin.id,
-                  email: newAdmin.email || undefined,
-                  name: newAdmin.name || undefined,
-                  role: newAdmin.role,
-                };
               }
             }
           }
@@ -211,7 +240,6 @@ const providers = [
 
           // If user exists and has passwordHash, verify password
           if (user && user.passwordHash) {
-            const bcrypt = require("bcryptjs");
             const isValidPassword = await bcrypt.compare(trimmedPassword, user.passwordHash);
             
             if (isValidPassword) {
@@ -238,7 +266,16 @@ const providers = [
           }
           return null;
         } catch (error) {
-          console.error("[Auth] Authorization error:", error instanceof Error ? error.message : "Unknown error");
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          console.error("[Auth] Authorization error:", errorMessage);
+          if (errorStack) {
+            console.error("[Auth] Error stack:", errorStack);
+          }
+          // Log more details in development
+          if (process.env.NODE_ENV === "development") {
+            console.error("[Auth] Full error:", error);
+          }
           // Return null to indicate authentication failure
           // NextAuth will convert this to "CredentialsSignin" error
           return null;

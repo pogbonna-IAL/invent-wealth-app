@@ -82,7 +82,13 @@ export function SignInForm() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password. Please try again.");
+        // Show more specific error messages
+        const errorMessage = result.error === "CredentialsSignin" 
+          ? "Invalid email or password. Please try again."
+          : result.error === "Configuration"
+          ? "Authentication configuration error. Please contact support."
+          : `Authentication failed: ${result.error}`;
+        setError(errorMessage);
         setIsPasswordLoading(false);
       } else if (result?.ok) {
         // Check if user is admin and redirect accordingly
@@ -106,15 +112,20 @@ export function SignInForm() {
             router.push(callbackUrl);
           }
         } catch (checkError) {
+          console.error("[SignIn] Error checking admin status:", checkError);
           // Fallback: redirect to callbackUrl
           router.push(callbackUrl);
         }
       } else {
+        // No error but not ok - this shouldn't happen, but handle it gracefully
+        console.error("[SignIn] Unexpected signIn result:", result);
         setError("An unexpected error occurred. Please try again.");
         setIsPasswordLoading(false);
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      console.error("[SignIn] Sign in error:", err);
+      const errorMessage = err instanceof Error ? err.message : "An error occurred. Please try again.";
+      setError(errorMessage);
       setIsPasswordLoading(false);
     }
   };
