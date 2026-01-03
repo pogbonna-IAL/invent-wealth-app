@@ -708,10 +708,10 @@ export default async function AdminUserDetailPage({
                       No rental statements available for this user's properties
                     </p>
                   ) : (
-                    rentalStatements.map((statement) => {
+                    rentalStatements.map((statement: any) => {
                       const userPayout = statement.distributions
-                        .flatMap((d) => d.payouts)
-                        .find((p) => p.userId === id);
+                        .flatMap((d: any) => d.payouts)
+                        .find((p: any) => p.userId === id);
 
                       return (
                         <Card key={statement.id}>
