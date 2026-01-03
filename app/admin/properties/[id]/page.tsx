@@ -11,6 +11,7 @@ import { prisma } from "@/server/db/prisma";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { handleDatabaseError } from "@/lib/utils/db-error-handler";
+import { DeletePropertyButton } from "@/components/admin/properties/delete-property-button";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,8 @@ export default async function AdminPropertyDetailPage({
       where: { propertyId: property.id },
       orderBy: { createdAt: "desc" },
       take: 5,
-      ]);
+    }),
+    ]);
 
       totalInvestments = investmentsCount;
       totalInvestors = investors;
@@ -156,6 +158,12 @@ export default async function AdminPropertyDetailPage({
               <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </Link>
+          <DeletePropertyButton
+            propertyId={property.id}
+            propertyName={property.name}
+            variant="destructive"
+            size="default"
+          />
         </div>
       </div>
 

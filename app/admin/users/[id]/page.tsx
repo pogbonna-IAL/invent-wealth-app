@@ -33,8 +33,8 @@ export default async function AdminUserDetailPage({
 
     try {
       user = await prisma.user.findUnique({
-    where: { id },
-    include: {
+        where: { id },
+        include: {
       profile: true,
       onboarding: true,
       investments: {
@@ -91,7 +91,7 @@ export default async function AdminUserDetailPage({
           payouts: true,
         },
       },
-    });
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       handleDatabaseError(error, "/admin/users");

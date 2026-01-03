@@ -7,6 +7,7 @@ import { Plus, Edit, Eye, FileText } from "lucide-react";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { prisma } from "@/server/db/prisma";
 import { Property } from "@prisma/client";
+import { DeletePropertyButton } from "@/components/admin/properties/delete-property-button";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +152,12 @@ export default async function AdminPropertiesPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
+                      <DeletePropertyButton
+                        propertyId={property.id}
+                        propertyName={property.name}
+                        variant="ghost"
+                        size="sm"
+                      />
                     </div>
                   </td>
                 </tr>

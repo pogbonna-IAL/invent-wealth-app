@@ -203,7 +203,8 @@ export default async function AdminDashboardPage() {
           },
         ],
       },
-      ]);
+    }),
+    ]);
 
       totalProperties = propsCount;
       totalUsers = usersCount;

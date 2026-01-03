@@ -127,3 +127,50 @@ export async function updateProperty(data: z.infer<typeof updatePropertySchema>)
   }
 }
 
+export async function deleteProperty(propertyId: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await requireAdmin(session.user.id);
+
+    // Check if property exists
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      include: {
+        investments: {
+          where: { status: "CONFIRMED" },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!property) {
+      return { success: false, error: "Property not found" };
+    }
+
+    // Check if property has confirmed investments
+    if (property.investments.length > 0) {
+      return {
+        success: false,
+        error: `Cannot delete property with ${property.investments.length} confirmed investment(s). Please cancel or refund investments first.`,
+      };
+    }
+
+    // Delete the property (cascade will handle related records)
+    await prisma.property.delete({
+      where: { id: propertyId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Delete property error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete property",
+    };
+  }
+}
+
