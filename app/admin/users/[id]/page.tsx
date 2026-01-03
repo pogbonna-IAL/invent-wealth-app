@@ -462,7 +462,7 @@ export default async function AdminUserDetailPage({
 
               <TabsContent value="by-property" className="mt-4">
                 <div className="space-y-4">
-                  {Object.entries(payoutsByProperty).map(([propertyId, propertyDist]) => (
+                  {Object.entries(payoutsByProperty).map(([propertyId, propertyDist]: [string, any]) => (
                     <Card key={propertyId}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
@@ -553,7 +553,7 @@ export default async function AdminUserDetailPage({
               <TabsContent value="by-month" className="mt-4">
                 <div className="space-y-4">
                   {Object.values(payoutsByMonth)
-                    .sort((a, b) => b.month.localeCompare(a.month))
+                    .sort((a: any, b: any) => b.month.localeCompare(a.month))
                     .map((month) => (
                       <Card key={month.month}>
                         <CardHeader>

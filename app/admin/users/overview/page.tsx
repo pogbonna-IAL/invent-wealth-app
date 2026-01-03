@@ -98,14 +98,14 @@ export default async function AdminUsersOverviewPage() {
         invested,
       };
     })
-    .sort((a, b) => b.invested - a.invested)
+    .sort((a: any, b: any) => b.invested - a.invested)
     .slice(0, 10);
 
   // Top earners by income received
   const topEarners = users
-    .map((user) => {
+    .map((user: any) => {
       const income = user.payouts.reduce(
-        (sum, payout) => sum + Number(payout.amount),
+        (sum: number, payout: any) => sum + Number(payout.amount),
         0
       );
       return {
@@ -113,7 +113,7 @@ export default async function AdminUsersOverviewPage() {
         income,
       };
     })
-    .sort((a, b) => b.income - a.income)
+    .sort((a: any, b: any) => b.income - a.income)
     .slice(0, 10);
 
   // Users by registration date (last 30 days)

@@ -179,7 +179,7 @@ export default async function AdminIncomePage() {
         <CardContent>
           <div className="space-y-4">
             {Object.values(incomeByUser)
-              .sort((a, b) => b.totalAmount - a.totalAmount)
+              .sort((a: any, b: any) => b.totalAmount - a.totalAmount)
               .slice(0, 20)
               .map((userIncome) => (
                 <div
@@ -228,7 +228,7 @@ export default async function AdminIncomePage() {
         <CardContent>
           <div className="space-y-4">
             {Object.values(incomeByProperty)
-              .sort((a, b) => b.totalAmount - a.totalAmount)
+              .sort((a: any, b: any) => b.totalAmount - a.totalAmount)
               .map((propertyIncome) => (
                 <div
                   key={propertyIncome.property.id}

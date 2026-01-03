@@ -54,7 +54,7 @@ export default async function StatementsPage() {
     })
   );
 
-  const statements = allStatements.flat().sort((a, b) => {
+  const statements = allStatements.flat().sort((a: any, b: any) => {
     return (
       new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()
     );

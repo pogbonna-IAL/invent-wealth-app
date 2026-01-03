@@ -177,8 +177,8 @@ export default async function MultiPropertyDistributionDashboard() {
         <CardContent>
           <div className="space-y-4">
             {Object.values(byProperty)
-              .sort((a, b) => b.totalDistributed - a.totalDistributed)
-              .map((propertyData) => (
+              .sort((a: any, b: any) => b.totalDistributed - a.totalDistributed)
+              .map((propertyData: any) => (
                 <div
                   key={propertyData.property.id}
                   className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors"
@@ -219,7 +219,7 @@ export default async function MultiPropertyDistributionDashboard() {
         <CardContent>
           <div className="space-y-4">
             {Object.values(byMonth)
-              .sort((a, b) => b.month.localeCompare(a.month))
+              .sort((a: any, b: any) => b.month.localeCompare(a.month))
               .map((monthData) => (
                 <div
                   key={monthData.month}
