@@ -389,7 +389,7 @@ export default async function AdminUserDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {serializedInvestments.map((investment) => (
+                {serializedInvestments.map((investment: any) => (
                   <TableRow key={investment.id}>
                     <TableCell>
                       <Link
@@ -482,7 +482,7 @@ export default async function AdminUserDetailPage({
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {propertyDist.payouts.map((payout) => {
+                          {propertyDist.payouts.map((payout: any) => {
                             const periodStart = payout.distribution.rentalStatement.periodStart;
                             const periodEnd = payout.distribution.rentalStatement.periodEnd;
                             const totalOutstandingShares = propertyDist.property.totalShares - propertyDist.property.availableShares;
@@ -554,7 +554,7 @@ export default async function AdminUserDetailPage({
                 <div className="space-y-4">
                   {Object.values(payoutsByMonth)
                     .sort((a: any, b: any) => b.month.localeCompare(a.month))
-                    .map((month) => (
+                    .map((month: any) => (
                       <Card key={month.month}>
                         <CardHeader>
                           <div className="flex items-center justify-between">
@@ -576,7 +576,7 @@ export default async function AdminUserDetailPage({
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            {month.payouts.map((payout) => (
+                            {month.payouts.map((payout: any) => (
                               <div
                                 key={payout.id}
                                 className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
@@ -627,7 +627,7 @@ export default async function AdminUserDetailPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {user.payouts.map((payout) => (
+                    {user.payouts.map((payout: any) => (
                       <TableRow key={payout.id}>
                         <TableCell>{format(payout.createdAt, "MMM d, yyyy")}</TableCell>
                         <TableCell>{payout.property.name}</TableCell>
@@ -664,7 +664,7 @@ export default async function AdminUserDetailPage({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {user.transactions.map((transaction) => (
+                        {user.transactions.map((transaction: any) => (
                           <TableRow key={transaction.id}>
                             <TableCell>
                               {format(transaction.createdAt, "MMM d, yyyy 'at' h:mm a")}
