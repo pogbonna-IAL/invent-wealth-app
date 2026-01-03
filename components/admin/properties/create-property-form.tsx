@@ -263,7 +263,7 @@ export function CreatePropertyForm() {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to create property";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to create property";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

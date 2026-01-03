@@ -80,7 +80,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to update user";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to update user";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

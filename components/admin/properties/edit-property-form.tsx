@@ -108,7 +108,7 @@ export function EditPropertyForm({ property }: EditPropertyFormProps) {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to update property";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to update property";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

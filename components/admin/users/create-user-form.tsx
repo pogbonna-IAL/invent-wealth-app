@@ -97,7 +97,7 @@ export function CreateUserForm() {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to create user";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to create user";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

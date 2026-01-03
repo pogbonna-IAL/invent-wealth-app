@@ -53,7 +53,7 @@ export function DeleteDistributionButton({
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to delete distribution";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to delete distribution";
         toast.error(errorMessage);
         throw new Error(errorMessage);
       }

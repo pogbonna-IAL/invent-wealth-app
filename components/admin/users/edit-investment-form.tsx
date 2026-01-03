@@ -59,7 +59,7 @@ export function EditInvestmentForm({ investment }: EditInvestmentFormProps) {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to update investment";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to update investment";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

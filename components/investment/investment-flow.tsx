@@ -106,7 +106,7 @@ export function InvestmentFlow({ property, userId }: InvestmentFlowProps) {
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Investment failed";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Investment failed";
         toast.error(errorMessage);
         throw new Error(errorMessage);
       }

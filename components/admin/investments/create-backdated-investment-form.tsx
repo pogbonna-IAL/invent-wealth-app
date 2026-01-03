@@ -104,7 +104,7 @@ export function CreateBackdatedInvestmentForm({
       });
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to create investment";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to create investment";
         toast.error(errorMessage);
         setError(errorMessage);
         return;

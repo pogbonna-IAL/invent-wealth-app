@@ -40,7 +40,7 @@ export function AccountSettings({ userId }: AccountSettingsProps) {
       const result = await softDeleteAccount();
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to deactivate account";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to deactivate account";
         toast.error(errorMessage);
         throw new Error(errorMessage);
       }
@@ -68,7 +68,7 @@ export function AccountSettings({ userId }: AccountSettingsProps) {
       const result = await deleteAccount();
 
       if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Failed to delete account";
+        const errorMessage = ("error" in result && result.error) ? result.error : "Failed to delete account";
         toast.error(errorMessage);
         throw new Error(errorMessage);
       }
