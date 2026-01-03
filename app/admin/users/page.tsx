@@ -90,7 +90,7 @@ export default async function AdminUsersPage() {
             <tbody>
               {users.map((user) => {
                 const totalInvested = user.investments.reduce(
-                  (sum, inv) => sum + Number(inv.totalAmount),
+                  (sum: number, inv: any) => sum + Number(inv.totalAmount),
                   0
                 );
 
