@@ -12,6 +12,7 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 import { DeletePropertyButton } from "@/components/admin/properties/delete-property-button";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function AdminPropertyDetailPage({
     // Get property statistics with error handling
     let totalInvestments = 0;
     let totalInvestors: any[] = [];
-    let totalInvested = { _sum: { totalAmount: null as number | null } };
+    let totalInvested: { _sum: { totalAmount: Prisma.Decimal | null } } = { _sum: { totalAmount: null } };
     let confirmedInvestments: any[] = [];
     let rentalStatements: any[] = [];
     let distributions: any[] = [];
