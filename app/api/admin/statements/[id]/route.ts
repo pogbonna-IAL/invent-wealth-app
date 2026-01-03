@@ -6,6 +6,7 @@ import { z } from "zod";
 import { DistributionStatus } from "@prisma/client";
 import { calculateMonthlyBreakdown, prorateToMonthly } from "@/lib/utils/statement-pro-rating";
 import { DistributionService } from "@/server/services/distribution.service";
+import { handleDatabaseErrorResponse } from "@/lib/utils/db-error-handler";
 
 const operatingCostItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
@@ -45,7 +46,9 @@ export async function PUT(
     const validated = updateStatementSchema.parse(body);
 
     // Get existing statement with distributions
-    const existingStatement = await prisma.rentalStatement.findUnique({
+    let existingStatement;
+    try {
+      existingStatement = await prisma.rentalStatement.findUnique({
       where: { id },
       include: {
         distributions: {
@@ -57,6 +60,10 @@ export async function PUT(
         },
       },
     });
+    } catch (dbError) {
+      console.error("Database error fetching statement:", dbError);
+      return handleDatabaseErrorResponse(dbError, `/admin/statements/${id}/edit`);
+    }
 
     if (!existingStatement) {
       return NextResponse.json({ error: "Statement not found" }, { status: 404 });
@@ -166,7 +173,9 @@ export async function PUT(
     updateData.netDistributable = netDistributable;
 
     // Update statement and recalculate distributions if they exist
-    const updatedStatement = await prisma.$transaction(async (tx) => {
+    let updatedStatement;
+    try {
+      updatedStatement = await prisma.$transaction(async (tx) => {
       // Update statement
       const statement = await tx.rentalStatement.update({
         where: { id },
@@ -196,7 +205,11 @@ export async function PUT(
       }
 
       return statement;
-    });
+      });
+    } catch (dbError) {
+      console.error("Database error updating statement:", dbError);
+      return handleDatabaseErrorResponse(dbError, `/admin/statements/${id}/edit`);
+    }
 
     return NextResponse.json({
       success: true,
@@ -214,12 +227,7 @@ export async function PUT(
     }
 
     console.error("Update statement error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to update statement",
-      },
-      { status: 500 }
-    );
+    return handleDatabaseErrorResponse(error, `/admin/statements/${id}/edit`);
   }
 }
 

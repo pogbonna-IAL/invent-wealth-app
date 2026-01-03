@@ -10,6 +10,7 @@ import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { prisma } from "@/server/db/prisma";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -28,22 +29,38 @@ export default async function AdminPropertyDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const property = await PropertyService.getPropertyById(id);
+  try {
+    const { id } = await params;
+    let property;
+    
+    try {
+      property = await PropertyService.getPropertyById(id);
+    } catch (error) {
+      console.error("Error fetching property:", error);
+      handleDatabaseError(error, "/admin/properties");
+    }
 
-  if (!property) {
-    notFound();
-  }
+    if (!property) {
+      notFound();
+    }
 
-  // Get property statistics
-  const [
-    totalInvestments,
-    totalInvestors,
-    totalInvested,
-    confirmedInvestments,
-    rentalStatements,
-    distributions,
-  ] = await Promise.all([
+    // Get property statistics with error handling
+    let totalInvestments = 0;
+    let totalInvestors: any[] = [];
+    let totalInvested = { _sum: { totalAmount: null as number | null } };
+    let confirmedInvestments: any[] = [];
+    let rentalStatements: any[] = [];
+    let distributions: any[] = [];
+
+    try {
+      const [
+        investmentsCount,
+        investors,
+        invested,
+        confirmedInv,
+        statements,
+        dists,
+      ] = await Promise.all([
     prisma.investment.count({
       where: { propertyId: property.id },
     }),
@@ -91,12 +108,22 @@ export default async function AdminPropertyDetailPage({
       where: { propertyId: property.id },
       orderBy: { createdAt: "desc" },
       take: 5,
-    }),
-  ]);
+      ]);
 
-  const investedShares = property.totalShares - property.availableShares;
-  const fundingPercentage = (investedShares / property.totalShares) * 100;
-  const uniqueInvestors = totalInvestors.length;
+      totalInvestments = investmentsCount;
+      totalInvestors = investors;
+      totalInvested = invested;
+      confirmedInvestments = confirmedInv;
+      rentalStatements = statements;
+      distributions = dists;
+    } catch (error) {
+      console.error("Error fetching property statistics:", error);
+      handleDatabaseError(error, `/admin/properties/${id}`);
+    }
+
+    const investedShares = property.totalShares - property.availableShares;
+    const fundingPercentage = (investedShares / property.totalShares) * 100;
+    const uniqueInvestors = totalInvestors.length;
 
   return (
     <div className="space-y-8">
@@ -430,5 +457,9 @@ export default async function AdminPropertyDetailPage({
       </Tabs>
     </div>
   );
+  } catch (error) {
+    console.error("Admin property detail page error:", error);
+    handleDatabaseError(error, "/admin/properties");
+  }
 }
 

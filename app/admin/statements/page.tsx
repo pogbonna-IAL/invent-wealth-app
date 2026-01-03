@@ -6,11 +6,15 @@ import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { DeclareDistributionButton } from "@/components/admin/statements/declare-distribution-button";
 import { DownloadExpensesButton } from "@/components/admin/statements/download-expenses-button";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatementsPage() {
-  const statements = await prisma.rentalStatement.findMany({
+  let statements: any[] = [];
+  
+  try {
+    statements = await prisma.rentalStatement.findMany({
     include: {
       property: {
         select: {
@@ -28,8 +32,12 @@ export default async function AdminStatementsPage() {
     orderBy: {
       periodStart: "desc",
     },
-    take: 50,
-  });
+      take: 50,
+    });
+  } catch (error) {
+    console.error("Error fetching statements:", error);
+    handleDatabaseError(error, "/admin");
+  }
 
   return (
     <div className="space-y-8">

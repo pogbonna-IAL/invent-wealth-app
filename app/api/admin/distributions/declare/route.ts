@@ -5,6 +5,7 @@ import { DistributionService } from "@/server/services/distribution.service";
 import { DistributionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { z } from "zod";
+import { handleDatabaseErrorResponse } from "@/lib/utils/db-error-handler";
 
 const declareDistributionSchema = z.object({
   propertyId: z.string().min(1, "Property ID is required"),
@@ -24,10 +25,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { propertyId, rentalStatementId } = declareDistributionSchema.parse(body);
 
-    // Check if distribution already exists for this rental statement
-    const existingDistribution = await prisma.distribution.findFirst({
-      where: { rentalStatementId },
-    });
+    let existingDistribution;
+    try {
+      // Check if distribution already exists for this rental statement
+      existingDistribution = await prisma.distribution.findFirst({
+        where: { rentalStatementId },
+      });
+    } catch (dbError) {
+      console.error("Database error checking existing distribution:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/admin/distributions");
+    }
 
     if (existingDistribution) {
       return NextResponse.json(
@@ -37,34 +44,51 @@ export async function POST(request: NextRequest) {
     }
 
     // Create draft distribution and payouts
-    const draftResult = await DistributionService.createDraftDistribution(
-      propertyId,
-      rentalStatementId
-    );
+    let draftResult;
+    try {
+      draftResult = await DistributionService.createDraftDistribution(
+        propertyId,
+        rentalStatementId
+      );
+    } catch (dbError) {
+      console.error("Database error creating draft distribution:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/admin/distributions");
+    }
 
     // Mark distribution as DECLARED (skip approval flow for direct declaration)
-    const declaredDistribution = await prisma.distribution.update({
-      where: { id: draftResult.distribution.id },
-      data: {
-        status: DistributionStatus.DECLARED,
-        declaredAt: new Date(),
-      },
-    });
+    let declaredDistribution;
+    try {
+      declaredDistribution = await prisma.distribution.update({
+        where: { id: draftResult.distribution.id },
+        data: {
+          status: DistributionStatus.DECLARED,
+          declaredAt: new Date(),
+        },
+      });
+    } catch (dbError) {
+      console.error("Database error updating distribution:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/admin/distributions");
+    }
 
     // Create transaction records for all payouts
-    await Promise.all(
-      draftResult.payouts.map(async (payout) => {
-        await prisma.transaction.create({
-          data: {
-            userId: payout.userId,
-            type: TransactionType.PAYOUT,
-            amount: payout.amount,
-            currency: "NGN",
-            reference: `PAY-${payout.id.slice(0, 8).toUpperCase()}`,
-          },
-        });
-      })
-    );
+    try {
+      await Promise.all(
+        draftResult.payouts.map(async (payout) => {
+          await prisma.transaction.create({
+            data: {
+              userId: payout.userId,
+              type: TransactionType.PAYOUT,
+              amount: payout.amount,
+              currency: "NGN",
+              reference: `PAY-${payout.id.slice(0, 8).toUpperCase()}`,
+            },
+          });
+        })
+      );
+    } catch (dbError) {
+      console.error("Database error creating transactions:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/admin/distributions");
+    }
 
     const result = {
       distribution: declaredDistribution,
@@ -86,12 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Distribution declaration error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to declare distribution",
-      },
-      { status: 500 }
-    );
+    return handleDatabaseErrorResponse(error, "/admin/distributions");
   }
 }
 

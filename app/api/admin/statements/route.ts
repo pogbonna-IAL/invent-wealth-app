@@ -4,6 +4,7 @@ import { requireAdmin } from "@/server/services/admin.service";
 import { prisma } from "@/server/db/prisma";
 import { z } from "zod";
 import { calculateMonthlyBreakdown, prorateToMonthly, type MonthlyBreakdown } from "@/lib/utils/statement-pro-rating";
+import { handleDatabaseErrorResponse } from "@/lib/utils/db-error-handler";
 
 const operatingCostItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
@@ -84,22 +85,28 @@ export async function POST(request: NextRequest) {
     const netDistributable =
       validated.grossRevenue - validated.operatingCosts - validated.managementFee + incomeAdjustment;
 
-    const statement = await prisma.rentalStatement.create({
-      data: {
-        propertyId: validated.propertyId,
-        periodStart,
-        periodEnd,
-        grossRevenue: validated.grossRevenue,
-        operatingCosts: validated.operatingCosts,
-        operatingCostItems: proratedOperatingCostItems || validated.operatingCostItems || undefined,
-        managementFee: validated.managementFee,
-        incomeAdjustment: incomeAdjustment,
-        netDistributable,
-        occupancyRatePct: validated.occupancyRatePct,
-        adr: validated.adr,
-        notes: validated.notes || null,
-      },
-    });
+    let statement;
+    try {
+      statement = await prisma.rentalStatement.create({
+        data: {
+          propertyId: validated.propertyId,
+          periodStart,
+          periodEnd,
+          grossRevenue: validated.grossRevenue,
+          operatingCosts: validated.operatingCosts,
+          operatingCostItems: proratedOperatingCostItems || validated.operatingCostItems || undefined,
+          managementFee: validated.managementFee,
+          incomeAdjustment: incomeAdjustment,
+          netDistributable,
+          occupancyRatePct: validated.occupancyRatePct,
+          adr: validated.adr,
+          notes: validated.notes || null,
+        },
+      });
+    } catch (dbError) {
+      console.error("Database error creating statement:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/admin/statements");
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -116,12 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Create statement error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to create statement",
-      },
-      { status: 500 }
-    );
+    return handleDatabaseErrorResponse(error, "/admin/statements");
   }
 }
 

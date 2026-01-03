@@ -3,6 +3,7 @@ import { auth } from "@/server/auth";
 import { InvestmentService } from "@/server/services/investment.service";
 import { OnboardingService } from "@/server/services/onboarding.service";
 import { z } from "zod";
+import { handleDatabaseErrorResponse } from "@/lib/utils/db-error-handler";
 
 const investmentSchema = z.object({
   propertyId: z.string(),
@@ -18,7 +19,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if onboarding is complete
-    const isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
+    let isOnboardingComplete = false;
+    try {
+      isOnboardingComplete = await OnboardingService.isOnboardingComplete(session.user.id);
+    } catch (error) {
+      console.error("Error checking onboarding status:", error);
+      return handleDatabaseErrorResponse(error, "/dashboard");
+    }
+
     if (!isOnboardingComplete) {
       return NextResponse.json(
         { error: "Please complete your investor profile before making investments" },
@@ -29,11 +37,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { propertyId, shares } = investmentSchema.parse(body);
 
-    const investment = await InvestmentService.purchaseShares(
-      session.user.id,
-      propertyId,
-      shares
-    );
+    let investment;
+    try {
+      investment = await InvestmentService.purchaseShares(
+        session.user.id,
+        propertyId,
+        shares
+      );
+    } catch (dbError) {
+      console.error("Database error creating investment:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/dashboard/invest");
+    }
 
     return NextResponse.json({ success: true, investment });
   } catch (error) {
@@ -44,10 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Investment failed" },
-      { status: 500 }
-    );
+    console.error("Investment API error:", error);
+    return handleDatabaseErrorResponse(error, "/dashboard/invest");
   }
 }
 

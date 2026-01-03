@@ -6,11 +6,15 @@ import Link from "next/link";
 import { FileText, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { DeleteUserButton } from "@/components/admin/users/delete-user-button";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
-  const users = await prisma.user.findMany({
+  let users: any[] = [];
+  
+  try {
+    users = await prisma.user.findMany({
     // Removed role filter to show all users (INVESTOR and ADMIN)
     include: {
       investments: {
@@ -36,8 +40,12 @@ export default async function AdminUsersPage() {
     orderBy: {
       createdAt: "desc",
     },
-    take: 100,
-  });
+      take: 100,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    handleDatabaseError(error, "/admin");
+  }
 
   return (
     <div className="space-y-8">

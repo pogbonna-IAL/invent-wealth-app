@@ -8,32 +8,49 @@ import { ExternalLink, LayoutDashboard, TrendingUp, Activity, DollarSign, Receip
 import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  // Calculate date for recent activity (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Calculate date for recent activity (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Get statistics
-  const [
-    totalProperties,
-    totalUsers,
-    totalInvestments,
-    totalDistributions,
-    openProperties,
-    totalInvested,
-    totalIncomeDistributed,
-    totalTransactions,
-    recentTransactions,
-    recentInvestments,
-    recentPayouts,
-    activeUsers,
-    activeUsersCount,
-  ] = await Promise.all([
+    // Get statistics with error handling
+    let totalProperties = 0;
+    let totalUsers = 0;
+    let totalInvestments = 0;
+    let totalDistributions = 0;
+    let openProperties = 0;
+    let totalInvested = { _sum: { totalAmount: null as number | null } };
+    let totalIncomeDistributed = { _sum: { amount: null as number | null } };
+    let totalTransactions = 0;
+    let recentTransactions: any[] = [];
+    let recentInvestments: any[] = [];
+    let recentPayouts: any[] = [];
+    let activeUsers: any[] = [];
+    let activeUsersCount = 0;
+
+    try {
+      const [
+        propsCount,
+        usersCount,
+        investmentsCount,
+        distributionsCount,
+        openPropsCount,
+        invested,
+        incomeDistributed,
+        transactionsCount,
+        recentTrans,
+        recentInv,
+        recentPay,
+        activeUsrs,
+        activeUsrsCount,
+      ] = await Promise.all([
     prisma.property.count(),
     prisma.user.count({ where: { role: "INVESTOR" } }),
     prisma.investment.count({ where: { status: "CONFIRMED" } }),
@@ -186,10 +203,27 @@ export default async function AdminDashboardPage() {
           },
         ],
       },
-    }),
-  ]);
+      ]);
 
-  return (
+      totalProperties = propsCount;
+      totalUsers = usersCount;
+      totalInvestments = investmentsCount;
+      totalDistributions = distributionsCount;
+      openProperties = openPropsCount;
+      totalInvested = invested;
+      totalIncomeDistributed = incomeDistributed;
+      totalTransactions = transactionsCount;
+      recentTransactions = recentTrans;
+      recentInvestments = recentInv;
+      recentPayouts = recentPay;
+      activeUsers = activeUsrs;
+      activeUsersCount = activeUsrsCount;
+    } catch (error) {
+      console.error("Error fetching admin dashboard data:", error);
+      handleDatabaseError(error, "/admin");
+    }
+
+    return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -601,5 +635,9 @@ export default async function AdminDashboardPage() {
       </Card>
     </div>
   );
+  } catch (error) {
+    console.error("Admin dashboard error:", error);
+    handleDatabaseError(error, "/admin");
+  }
 }
 

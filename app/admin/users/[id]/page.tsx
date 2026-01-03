@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/prisma";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +27,12 @@ export default async function AdminUserDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  try {
+    const { id } = await params;
+    let user;
 
-  const user = await prisma.user.findUnique({
+    try {
+      user = await prisma.user.findUnique({
     where: { id },
     include: {
       profile: true,
@@ -87,17 +91,22 @@ export default async function AdminUserDetailPage({
           payouts: true,
         },
       },
-    },
-  });
+    });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      handleDatabaseError(error, "/admin/users");
+    }
 
-  if (!user) {
-    notFound();
-  }
+    if (!user) {
+      notFound();
+    }
 
-  // Get rental statements for properties user has invested in
-  const propertyIds = user.investments.map((inv) => inv.propertyId);
-  const rentalStatements = propertyIds.length > 0
-    ? await prisma.rentalStatement.findMany({
+    // Get rental statements for properties user has invested in
+    let rentalStatements: any[] = [];
+    try {
+      const propertyIds = user.investments.map((inv) => inv.propertyId);
+      rentalStatements = propertyIds.length > 0
+        ? await prisma.rentalStatement.findMany({
         where: {
           propertyId: { in: propertyIds },
         },
@@ -123,11 +132,16 @@ export default async function AdminUserDetailPage({
           periodStart: "desc",
         },
       })
-    : [];
+        : [];
+    } catch (error) {
+      console.error("Error fetching rental statements:", error);
+      // Continue with empty array if rental statements fail
+      rentalStatements = [];
+    }
 
-  if (!user) {
-    notFound();
-  }
+    if (!user) {
+      notFound();
+    }
 
   // Serialize investments to convert Decimal fields to numbers
   const serializedInvestments = user.investments.map((inv) => ({
@@ -776,5 +790,9 @@ export default async function AdminUserDetailPage({
       )}
     </div>
   );
+  } catch (error) {
+    console.error("Admin user detail page error:", error);
+    handleDatabaseError(error, "/admin/users");
+  }
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/server/auth";
 import { prisma } from "@/server/db/prisma";
 import { z } from "zod";
+import { handleDatabaseErrorResponse } from "@/lib/utils/db-error-handler";
 
 const onboardingSchema = z.object({
   profile: z.object({
@@ -31,41 +32,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { profile, riskAnswers } = onboardingSchema.parse(body);
 
-    // Update user name if provided
-    if (profile.name) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { name: profile.name },
+    try {
+      // Update user name if provided
+      if (profile.name) {
+        await prisma.user.update({
+          where: { id: session.user.id },
+          data: { name: profile.name },
+        });
+      }
+
+      // Update or create profile
+      await prisma.profile.upsert({
+        where: { userId: session.user.id },
+        update: {
+          phone: profile.phone,
+          address: profile.address || null,
+          country: profile.country,
+          dob: profile.dob ? new Date(profile.dob) : null,
+        },
+        create: {
+          userId: session.user.id,
+          phone: profile.phone,
+          address: profile.address || null,
+          country: profile.country,
+          dob: profile.dob ? new Date(profile.dob) : null,
+        },
       });
+
+      // Update onboarding status
+      await prisma.onboarding.update({
+        where: { userId: session.user.id },
+        data: {
+          status: "COMPLETED",
+          riskAnswers: riskAnswers,
+          kycStatus: "IN_REVIEW", // Start KYC review process
+        },
+      });
+    } catch (dbError) {
+      console.error("Database error completing onboarding:", dbError);
+      return handleDatabaseErrorResponse(dbError, "/onboarding");
     }
-
-    // Update or create profile
-    await prisma.profile.upsert({
-      where: { userId: session.user.id },
-      update: {
-        phone: profile.phone,
-        address: profile.address || null,
-        country: profile.country,
-        dob: profile.dob ? new Date(profile.dob) : null,
-      },
-      create: {
-        userId: session.user.id,
-        phone: profile.phone,
-        address: profile.address || null,
-        country: profile.country,
-        dob: profile.dob ? new Date(profile.dob) : null,
-      },
-    });
-
-    // Update onboarding status
-    await prisma.onboarding.update({
-      where: { userId: session.user.id },
-      data: {
-        status: "COMPLETED",
-        riskAnswers: riskAnswers,
-        kycStatus: "IN_REVIEW", // Start KYC review process
-      },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -77,10 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Onboarding completion error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to complete onboarding" },
-      { status: 500 }
-    );
+    return handleDatabaseErrorResponse(error, "/onboarding");
   }
 }
 

@@ -5,11 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { format } from "date-fns";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
+import { handleDatabaseError } from "@/lib/utils/db-error-handler";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDistributionsPage() {
-  const distributions = await prisma.distribution.findMany({
+  let distributions: any[] = [];
+  
+  try {
+    distributions = await prisma.distribution.findMany({
     include: {
       property: {
         select: {
@@ -33,8 +37,12 @@ export default async function AdminDistributionsPage() {
     orderBy: {
       declaredAt: "desc",
     },
-    take: 50,
-  });
+      take: 50,
+    });
+  } catch (error) {
+    console.error("Error fetching distributions:", error);
+    handleDatabaseError(error, "/admin");
+  }
 
   // Serialize Decimal fields to prevent passing Decimal objects to client components
   const serializedDistributions = distributions.map((dist) => ({
