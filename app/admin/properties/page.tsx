@@ -6,12 +6,13 @@ import Link from "next/link";
 import { Plus, Edit, Eye, FileText } from "lucide-react";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { prisma } from "@/server/db/prisma";
+import { Property } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPropertiesPage() {
-  let properties = [];
-  let propertiesWithAvailableShares = [];
+  let properties: Property[] = [];
+  let propertiesWithAvailableShares: (Property & { availableShares: number })[] = [];
 
   try {
     properties = await PropertyService.getProperties();
