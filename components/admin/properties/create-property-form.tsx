@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createProperty } from "@/app/actions/admin/properties";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
 import { PropertyType, ShortletModel, PropertyStatus } from "@prisma/client";
+import Image from "next/image";
 
 const propertyTypes = [
   "APARTMENT",
@@ -31,6 +32,7 @@ const statuses = ["OPEN", "FUNDED", "CLOSED"];
 export function CreatePropertyForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -49,10 +51,158 @@ export function CreatePropertyForm() {
     projectedAnnualYieldPct: "",
     status: "OPEN",
     coverImage: "",
+    coverVideo: "",
     gallery: "",
     highlights: "",
     createdAt: "",
   });
+
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [coverVideoFile, setCoverVideoFile] = useState<File | null>(null);
+  const [coverVideoPreview, setCoverVideoPreview] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      // Clear URL input when file is selected
+      setFormData({ ...formData, coverImage: "" });
+      // Clear video if image is selected
+      if (coverVideoFile || formData.coverVideo) {
+        setCoverVideoFile(null);
+        setCoverVideoPreview(null);
+        setFormData({ ...formData, coverVideo: "" });
+      }
+    }
+  };
+
+  const handleCoverVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverVideoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverVideoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      // Clear URL input when file is selected
+      setFormData({ ...formData, coverVideo: "" });
+      // Clear image if video is selected
+      if (coverImageFile || formData.coverImage) {
+        setCoverImageFile(null);
+        setCoverImagePreview(null);
+        setFormData({ ...formData, coverImage: "" });
+      }
+    }
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + galleryFiles.length > 20) {
+      setError("Maximum 20 gallery images allowed");
+      return;
+    }
+    
+    const newFiles = [...galleryFiles, ...files];
+    setGalleryFiles(newFiles);
+    
+    // Create previews
+    const newPreviews: string[] = [];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === files.length) {
+          setGalleryPreviews([...galleryPreviews, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Clear URL input when files are selected
+    setFormData({ ...formData, gallery: "" });
+  };
+
+  const removeCoverImage = () => {
+    setCoverImageFile(null);
+    setCoverImagePreview(null);
+  };
+
+  const removeCoverVideo = () => {
+    setCoverVideoFile(null);
+    setCoverVideoPreview(null);
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryFiles(galleryFiles.filter((_, i) => i !== index));
+    setGalleryPreviews(galleryPreviews.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (): Promise<{ coverImageUrl?: string; coverVideoUrl?: string; galleryUrls: string[] }> => {
+    const uploadData = new FormData();
+    const filesToUpload: File[] = [];
+    
+    if (coverImageFile) {
+      uploadData.append("files", coverImageFile);
+      filesToUpload.push(coverImageFile);
+    }
+    
+    if (coverVideoFile) {
+      uploadData.append("files", coverVideoFile);
+      filesToUpload.push(coverVideoFile);
+    }
+    
+    galleryFiles.forEach((file) => {
+      uploadData.append("files", file);
+      filesToUpload.push(file);
+    });
+
+    if (filesToUpload.length === 0) {
+      return { galleryUrls: [] };
+    }
+
+    setIsUploading(true);
+    try {
+      const response = await fetch("/api/admin/properties/upload-images", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to upload media");
+      }
+
+      const data = await response.json();
+      const urls = data.urls as string[];
+      
+      // Determine which URLs are for cover image, video, and gallery
+      let coverImageUrl: string | undefined;
+      let coverVideoUrl: string | undefined;
+      let galleryUrls: string[] = [];
+      
+      let urlIndex = 0;
+      if (coverImageFile) {
+        coverImageUrl = urls[urlIndex++];
+      }
+      if (coverVideoFile) {
+        coverVideoUrl = urls[urlIndex++];
+      }
+      galleryUrls = urls.slice(urlIndex);
+      
+      return { coverImageUrl, coverVideoUrl, galleryUrls };
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,15 +210,34 @@ export function CreatePropertyForm() {
     setError(null);
 
     try {
+      // Upload images/videos if files are selected
+      let coverImageUrl = formData.coverImage;
+      let coverVideoUrl = formData.coverVideo;
+      let galleryUrls: string[] = [];
+
+      if (coverImageFile || coverVideoFile || galleryFiles.length > 0) {
+        const uploadResult = await uploadImages();
+        if (uploadResult.coverImageUrl) {
+          coverImageUrl = uploadResult.coverImageUrl;
+        }
+        if (uploadResult.coverVideoUrl) {
+          coverVideoUrl = uploadResult.coverVideoUrl;
+        }
+        galleryUrls = uploadResult.galleryUrls;
+      }
+
+      // Also include URLs from text inputs
+      const galleryArrayFromUrls = formData.gallery
+        .split("\n")
+        .map(url => url.trim())
+        .filter(url => url !== "" && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")))
+        .slice(0, 20 - galleryUrls.length);
+
+      const allGalleryUrls = [...galleryUrls, ...galleryArrayFromUrls];
+
       const highlightsArray = formData.highlights
         .split("\n")
         .filter((h) => h.trim() !== "");
-
-      const galleryArray = formData.gallery
-        .split("\n")
-        .map(url => url.trim())
-        .filter(url => url !== "" && (url.startsWith("http://") || url.startsWith("https://")))
-        .slice(0, 20);
 
       const result = await createProperty({
         name: formData.name,
@@ -86,8 +255,9 @@ export function CreatePropertyForm() {
         targetRaise: formData.targetRaise ? parseFloat(formData.targetRaise) : undefined,
         projectedAnnualYieldPct: parseFloat(formData.projectedAnnualYieldPct),
         highlights: highlightsArray,
-        gallery: galleryArray,
-        coverImage: formData.coverImage || undefined,
+        gallery: allGalleryUrls,
+        coverImage: coverImageUrl || undefined,
+        coverVideo: coverVideoUrl || undefined,
         createdAt: formData.createdAt || undefined,
       });
 
@@ -257,33 +427,209 @@ export function CreatePropertyForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="coverImage">Cover Image URL</Label>
-            <Input
-              id="coverImage"
-              type="url"
-              value={formData.coverImage}
-              onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
+            <Label htmlFor="coverImage">Cover Image</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="coverImageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverImageChange}
+                  className="cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground">or</span>
+                <Input
+                  id="coverImage"
+                  type="url"
+                  value={formData.coverImage}
+                  onChange={(e) => {
+                    setFormData({ ...formData, coverImage: e.target.value });
+                    if (e.target.value) {
+                      setCoverImageFile(null);
+                      setCoverImagePreview(null);
+                    }
+                  }}
+                  placeholder="https://example.com/image.jpg"
+                  className="flex-1"
+                />
+              </div>
+              {coverImagePreview && (
+                <div className="relative w-full max-w-md h-48 border rounded-md overflow-hidden">
+                  <Image
+                    src={coverImagePreview}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={removeCoverImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {formData.coverImage && !coverImagePreview && (
+                <div className="relative w-full max-w-md h-48 border rounded-md overflow-hidden">
+                  <Image
+                    src={formData.coverImage}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover"
+                    onError={() => setFormData({ ...formData, coverImage: "" })}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gallery">Gallery Images (1-20 URLs, one per line)</Label>
-            <Textarea
-              id="gallery"
-              value={formData.gallery}
-              onChange={(e) => {
-                const lines = e.target.value.split("\n").filter(line => line.trim() !== "");
-                if (lines.length <= 20) {
-                  setFormData({ ...formData, gallery: e.target.value });
-                }
-              }}
-              rows={8}
-              placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter 1-20 image URLs, one per line. {formData.gallery.split("\n").filter(l => l.trim()).length}/20 images
-            </p>
+            <Label htmlFor="coverVideo">Cover Video (Alternative to Cover Image)</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="coverVideoFile"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleCoverVideoChange}
+                  className="cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground">or</span>
+                <Input
+                  id="coverVideo"
+                  type="url"
+                  value={formData.coverVideo}
+                  onChange={(e) => {
+                    setFormData({ ...formData, coverVideo: e.target.value });
+                    if (e.target.value) {
+                      setCoverVideoFile(null);
+                      setCoverVideoPreview(null);
+                    }
+                    // Clear image if video URL is entered
+                    if (e.target.value && (coverImageFile || formData.coverImage)) {
+                      setCoverImageFile(null);
+                      setCoverImagePreview(null);
+                      setFormData({ ...formData, coverImage: "" });
+                    }
+                  }}
+                  placeholder="https://example.com/video.mp4"
+                  className="flex-1"
+                />
+              </div>
+              {coverVideoPreview && (
+                <div className="relative w-full max-w-md border rounded-md overflow-hidden">
+                  <video
+                    src={coverVideoPreview}
+                    controls
+                    className="w-full h-auto max-h-96"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={removeCoverVideo}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {formData.coverVideo && !coverVideoPreview && (
+                <div className="relative w-full max-w-md border rounded-md overflow-hidden">
+                  <video
+                    src={formData.coverVideo}
+                    controls
+                    className="w-full h-auto max-h-96"
+                    onError={() => setFormData({ ...formData, coverVideo: "" })}
+                  />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Upload a video file (MP4, WebM, OGG, MOV) or enter a video URL. Maximum size: 100MB. 
+                If both image and video are provided, video takes precedence.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gallery">Gallery Images (1-20 images)</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  id="galleryFiles"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleGalleryChange}
+                  className="cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground">or</span>
+                <Textarea
+                  id="gallery"
+                  value={formData.gallery}
+                  onChange={(e) => {
+                    const lines = e.target.value.split("\n").filter(line => line.trim() !== "");
+                    if (lines.length <= 20) {
+                      setFormData({ ...formData, gallery: e.target.value });
+                      if (e.target.value) {
+                        setGalleryFiles([]);
+                        setGalleryPreviews([]);
+                      }
+                    }
+                  }}
+                  rows={4}
+                  placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload files or enter URLs (one per line). Maximum 20 images total.
+                {galleryFiles.length > 0 && ` ${galleryFiles.length} file(s) selected.`}
+                {formData.gallery.split("\n").filter(l => l.trim()).length > 0 && 
+                  ` ${formData.gallery.split("\n").filter(l => l.trim()).length} URL(s) entered.`}
+              </p>
+              {(galleryPreviews.length > 0 || formData.gallery) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                  {galleryPreviews.map((preview, index) => (
+                    <div key={index} className="relative w-full h-32 border rounded-md overflow-hidden">
+                      <Image
+                        src={preview}
+                        alt={`Gallery preview ${index + 1}`}
+                        fill
+                        className="object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => removeGalleryImage(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {formData.gallery.split("\n").filter(l => l.trim()).map((url, index) => (
+                    <div key={`url-${index}`} className="relative w-full h-32 border rounded-md overflow-hidden">
+                      <Image
+                        src={url.trim()}
+                        alt={`Gallery preview ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        onError={() => {
+                          const urls = formData.gallery.split("\n").filter(l => l.trim());
+                          urls.splice(index, 1);
+                          setFormData({ ...formData, gallery: urls.join("\n") });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -420,9 +766,9 @@ export function CreatePropertyForm() {
             Cancel
           </Button>
         </Link>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Property
+        <Button type="submit" disabled={isLoading || isUploading}>
+          {(isLoading || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isUploading ? "Uploading Images..." : isLoading ? "Creating Property..." : "Create Property"}
         </Button>
       </div>
     </form>

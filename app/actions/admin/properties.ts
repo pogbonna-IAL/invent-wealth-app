@@ -6,6 +6,19 @@ import { prisma } from "@/server/db/prisma";
 import { PropertyStatus, PropertyType, ShortletModel } from "@prisma/client";
 import { z } from "zod";
 
+// Custom URL validator that accepts http/https URLs or local paths starting with /
+const imageUrlSchema = z.string().refine(
+  (val) => {
+    if (!val || val === "") return true;
+    return (
+      val.startsWith("http://") ||
+      val.startsWith("https://") ||
+      val.startsWith("/")
+    );
+  },
+  { message: "Must be a valid URL or local path starting with /" }
+);
+
 const createPropertySchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
@@ -21,8 +34,9 @@ const createPropertySchema = z.object({
   targetRaise: z.number().positive().optional(),
   projectedAnnualYieldPct: z.number().min(0).max(100),
   status: z.nativeEnum(PropertyStatus),
-  coverImage: z.string().url().optional().or(z.literal("")),
-  gallery: z.array(z.string().url()).max(20).optional(),
+  coverImage: imageUrlSchema.optional().or(z.literal("")),
+  coverVideo: imageUrlSchema.optional().or(z.literal("")),
+  gallery: z.array(imageUrlSchema).max(20).optional(),
   highlights: z.array(z.string()).optional(),
   createdAt: z.string().optional(), // ISO date string for backdating
 });
@@ -58,6 +72,7 @@ export async function createProperty(data: z.infer<typeof createPropertySchema>)
         ...validated,
         availableShares: validated.totalShares,
         coverImage: validated.coverImage || null,
+        coverVideo: validated.coverVideo || null,
         highlights: validated.highlights || [],
         gallery: validated.gallery || [],
         targetRaise,

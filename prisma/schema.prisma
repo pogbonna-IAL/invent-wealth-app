@@ -134,6 +134,7 @@ model Property {
   description             String         @db.Text
   highlights              Json? // Array of highlight strings
   coverImage              String?
+  coverVideo              String?
   gallery                 Json? // Array of image URLs
   propertyType            PropertyType
   shortletModel           ShortletModel
