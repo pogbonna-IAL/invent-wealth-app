@@ -5,11 +5,35 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, Edit, Eye, FileText } from "lucide-react";
 import { formatCurrencyNGN } from "@/lib/utils/currency";
+import { prisma } from "@/server/db/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPropertiesPage() {
   const properties = await PropertyService.getProperties();
+  
+  // Calculate availableShares dynamically for each property
+  const propertiesWithAvailableShares = await Promise.all(
+    properties.map(async (property) => {
+      // Get total confirmed investments for this property
+      const totalInvestedShares = await prisma.investment.aggregate({
+        where: {
+          propertyId: property.id,
+          status: "CONFIRMED",
+        },
+        _sum: {
+          shares: true,
+        },
+      });
+      const investedShares = totalInvestedShares._sum.shares || 0;
+      const availableShares = property.totalShares - investedShares;
+
+      return {
+        ...property,
+        availableShares, // Use dynamically calculated value
+      };
+    })
+  );
 
   return (
     <div className="space-y-8">
@@ -51,7 +75,7 @@ export default async function AdminPropertiesPage() {
               </tr>
             </thead>
             <tbody>
-              {properties.map((property) => (
+              {propertiesWithAvailableShares.map((property) => (
                 <tr key={property.id} className="border-b">
                   <td className="p-4">
                     <Link

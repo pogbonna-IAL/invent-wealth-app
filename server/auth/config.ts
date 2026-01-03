@@ -98,6 +98,17 @@ const providers = [
             });
 
             if (adminUser) {
+              // Ensure admin user has ADMIN role
+              if (adminUser.role !== "ADMIN") {
+                await prismaClient.user.update({
+                  where: { id: adminUser.id },
+                  data: { role: "ADMIN" },
+                });
+                if (isDev) {
+                  console.log("[Auth] Updated admin user role to ADMIN");
+                }
+              }
+              
               // Verify password if using admin username shortcut
               if (isAdminUsername) {
                 // For "admin"/"admin123" shortcut, verify against stored password
@@ -133,11 +144,26 @@ const providers = [
                     return null;
                   }
                 } else {
-                  // No password set for admin email
-                  if (isDev) {
-                    console.log("[Auth] Admin email has no password set");
+                  // Set default password if not set (for first-time setup)
+                  // Use "admin123" as default password for admin email
+                  const bcrypt = require("bcryptjs");
+                  const defaultPassword = "admin123";
+                  const passwordHash = await bcrypt.hash(defaultPassword, 10);
+                  await prismaClient.user.update({
+                    where: { id: adminUser.id },
+                    data: { passwordHash },
+                  });
+                  // Verify the password matches (should be admin123)
+                  const isValidPassword = await bcrypt.compare(trimmedPassword, passwordHash);
+                  if (!isValidPassword) {
+                    if (isDev) {
+                      console.log("[Auth] Admin email password set to admin123, but provided password doesn't match");
+                    }
+                    return null;
                   }
-                  return null;
+                  if (isDev) {
+                    console.log("[Auth] Set password for admin email to admin123");
+                  }
                 }
               }
 
