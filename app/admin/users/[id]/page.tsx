@@ -91,6 +91,7 @@ export default async function AdminUserDetailPage({
           payouts: true,
         },
       },
+    },
       });
     } catch (error) {
       console.error("Error fetching user:", error);
