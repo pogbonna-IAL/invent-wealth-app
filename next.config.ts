@@ -35,11 +35,6 @@ const nextConfig: NextConfig = {
     "/*": ["./node_modules/.prisma/client/**/*"],
   },
   
-  // Ensure server actions are properly included in standalone build
-  serverActions: {
-    bodySizeLimit: '2mb',
-  },
-  
   // Generate stable build ID for Server Actions compatibility
   // Server Actions require consistent build IDs across deployments
   generateBuildId: async () => {
@@ -64,14 +59,19 @@ const nextConfig: NextConfig = {
     }
     
     // Use git commit SHA if available (stable per commit)
+    // Note: Git may not be available in all build environments (e.g., Railway, Docker)
     try {
       const { execSync } = require('child_process');
-      const gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
-      if (gitSha) {
+      const gitSha = execSync('git rev-parse --short HEAD', { 
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'] // Suppress git errors
+      }).trim();
+      if (gitSha && gitSha.length > 0) {
         return gitSha;
       }
-    } catch {
-      // Git not available or not in a git repo - fall through
+    } catch (error) {
+      // Git not available or not in a git repo - fall through silently
+      // This is expected in many deployment environments
     }
     
     // Fallback: Use package.json version only (no timestamp to ensure stability)
