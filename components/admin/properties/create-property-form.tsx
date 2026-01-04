@@ -266,11 +266,13 @@ export function CreatePropertyForm() {
         const errorMessage = ("error" in result && result.error) ? result.error : "Failed to create property";
         toast.error(errorMessage);
         setError(errorMessage);
+        setIsLoading(false);
         return;
       }
 
       toast.success("Property created successfully!");
-      router.push(`/admin/properties/${result.propertyId}/edit?success=property_created`);
+      // Redirect to property list page to show the newly created property
+      router.push("/admin/properties?success=property_created");
       router.refresh();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";

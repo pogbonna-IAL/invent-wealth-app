@@ -7,6 +7,8 @@ import { FileText, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { DeleteUserButton } from "@/components/admin/users/delete-user-button";
 import { handleDatabaseError } from "@/lib/utils/db-error-handler";
+import { UserSuccessToast } from "@/components/admin/users/user-success-toast";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,9 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-8">
+      <Suspense fallback={null}>
+        <UserSuccessToast />
+      </Suspense>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">All Users</h1>

@@ -4,13 +4,28 @@ A production-grade, open-source web application for fractional property ownershi
 
 **Status**: ✅ Fully functional with comprehensive seed data. Ready for local development and testing.
 
+**Latest Updates** (January 2025):
+- ✅ Comprehensive error handling with centralized utilities
+- ✅ Toast notifications for consistent user feedback
+- ✅ Property file uploads (images, videos, gallery)
+- ✅ Property deletion capability in admin portal
+- ✅ Full TypeScript type safety improvements
+- ✅ Database error handling with graceful fallbacks
+- ✅ Dynamic available shares calculation
+
 ## Features
 
 - **Fractional Ownership**: Invest in premium properties by purchasing shares
 - **Income Distribution**: Receive monthly distributions from shortlet rental income proportional to your share ownership
-- **Investor Dashboard**: Track your portfolio, investments, income, and property performance
+- **Investor Dashboard**: Track your portfolio, investments, income, and property performance with interactive charts
 - **Property Management**: Browse available properties, view income statements, and access documents
-- **Authentication**: Secure email magic link authentication via NextAuth
+- **Admin Portal**: Comprehensive admin interface for managing properties, users, investments, distributions, and statements
+- **Authentication**: Secure email magic link authentication via NextAuth with optional password-based login in development
+- **Toast Notifications**: User-friendly success/error feedback using Sonner toast notifications
+- **Error Handling**: Comprehensive error handling with graceful fallbacks and user-friendly messages
+- **File Uploads**: Support for property images, videos, and gallery uploads
+- **Push Notifications**: Real-time browser push notifications for distribution updates (optional)
+- **Type Safety**: Full TypeScript coverage with strict type checking
 
 ## Tech Stack
 
@@ -21,7 +36,9 @@ A production-grade, open-source web application for fractional property ownershi
 - **Authentication**: NextAuth.js v5 (Auth.js) with email magic links
 - **Validation**: Zod + React Hook Form
 - **Charts**: Recharts
+- **Notifications**: Sonner (toast notifications)
 - **Testing**: Playwright
+- **Error Handling**: Custom database error handler utilities
 
 ## Prerequisites
 
@@ -171,10 +188,12 @@ InventWealth is built using Next.js 16 with the App Router, following a modern f
 
 ### Key Design Patterns
 
-- **Service Layer Pattern**: Business logic encapsulated in service classes
+- **Service Layer Pattern**: Business logic encapsulated in service classes (`server/services/`)
 - **Repository Pattern**: Prisma abstracts database access
 - **Content Management**: Marketing content loaded from JSON files (`content/`)
-- **Type Safety**: End-to-end TypeScript with Prisma-generated types
+- **Type Safety**: End-to-end TypeScript with Prisma-generated types and strict type checking
+- **Error Handling Pattern**: Centralized error handling utilities (`lib/utils/db-error-handler.ts`) for consistent error management
+- **Toast Notification Pattern**: Consistent user feedback using Sonner toast notifications across all forms
 
 ### Security
 
@@ -183,6 +202,9 @@ InventWealth is built using Next.js 16 with the App Router, following a modern f
 - **XSS Protection**: React's built-in escaping
 - **Authentication**: Secure session management via NextAuth
 - **Authorization**: Role-based access control at route and service level
+- **Error Handling**: Comprehensive try-catch blocks prevent crashes and provide graceful error recovery
+- **Input Validation**: Zod schema validation on all user inputs
+- **Type Safety**: TypeScript strict mode prevents runtime type errors
 
 ## Project Structure
 
@@ -217,7 +239,10 @@ invent-wealth/
 │   └── faq.json         # FAQ content
 ├── lib/                 # Shared utilities
 │   ├── content.ts       # Content loader utility
-│   └── utils.ts         # General utilities
+│   ├── utils.ts         # General utilities
+│   └── utils/           # Utility modules
+│       ├── db-error-handler.ts  # Database error handling utilities
+│       └── statement-pro-rating.ts  # Statement pro-rating calculations
 ├── public/              # Static assets
 ├── types/              # TypeScript type definitions
 └── next.config.ts      # Next.js configuration (standalone mode)
@@ -276,8 +301,34 @@ The application uses the following main models:
 
 ## API Routes
 
+### Public API Routes
+- `GET /api/health`: Health check endpoint
+- `GET/POST /api/auth/[...nextauth]`: NextAuth authentication endpoints
+
+### Investment API
 - `POST /api/investments`: Purchase shares in a property
-- `GET /api/auth/[...nextauth]`: NextAuth authentication endpoints
+
+### Onboarding API
+- `POST /api/onboarding/complete`: Complete user onboarding process
+- `GET /api/onboarding/status`: Get user onboarding status
+
+### Push Notifications API
+- `POST /api/push/register`: Register push notification subscription
+- `POST /api/push/send`: Send push notification (admin only)
+
+### Admin API Routes
+- `POST /api/admin/statements`: Create rental statement
+- `GET /api/admin/statements/[id]`: Get statement details
+- `PUT /api/admin/statements/[id]`: Update rental statement
+- `GET /api/admin/statements/[id]/download-expenses`: Download statement expenses (CSV)
+- `POST /api/admin/distributions/declare`: Declare distribution from rental statement
+- `GET /api/admin/distributions/[id]/payouts`: Get payouts for distribution
+- `POST /api/admin/properties/upload-images`: Upload property images/videos
+
+### Authentication API
+- `POST /api/auth/reset-password`: Request password reset
+- `POST /api/auth/change-password`: Change user password
+- `GET /api/auth/check-admin`: Check if user is admin
 
 ## Running the Application End-to-End
 
@@ -364,8 +415,11 @@ npm run build  # Automatically runs: npx prisma generate && next build
 
 - **ESLint**: Code linting with Next.js config
 - **Prettier**: Code formatting
-- **TypeScript**: Full type safety across the application
+- **TypeScript**: Full type safety across the application with strict mode
 - **Prisma**: Type-safe database access with generated types
+- **Error Handling**: Comprehensive try-catch blocks with centralized error handling utilities
+- **Type Annotations**: Explicit type annotations prevent implicit `any` and `unknown` type errors
+- **Toast Notifications**: Consistent user feedback using Sonner across all forms and actions
 
 ### Running Tests
 
@@ -422,6 +476,17 @@ Key configuration files in the project:
 - Ensure Prisma 6.x is installed: `npm install prisma@^6.0.0 @prisma/client@^6.0.0`
 - Clear Prisma cache: `rm -rf node_modules/.prisma`
 - Regenerate client: `npx prisma generate`
+
+**TypeScript compilation errors:**
+- Ensure all function parameters have explicit type annotations
+- Check for implicit `any` types in array callbacks (map, reduce, filter, etc.)
+- Run `npm run lint` to identify type errors
+
+**Database connection errors:**
+- Check `DATABASE_URL` environment variable
+- Verify database is running and accessible
+- Check network connectivity for remote databases
+- Review error messages in console for specific connection issues
 
 ## Contributing
 

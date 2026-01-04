@@ -8,6 +8,8 @@ import { formatCurrencyNGN } from "@/lib/utils/currency";
 import { prisma } from "@/server/db/prisma";
 import { Property } from "@prisma/client";
 import { DeletePropertyButton } from "@/components/admin/properties/delete-property-button";
+import { PropertySuccessToast } from "@/components/admin/properties/property-success-toast";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,9 @@ export default async function AdminPropertiesPage() {
 
   return (
     <div className="space-y-8">
+      <Suspense fallback={null}>
+        <PropertySuccessToast />
+      </Suspense>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Properties</h1>

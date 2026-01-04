@@ -1,7 +1,7 @@
 # InventWealth - Architecture & Feature Documentation
 
-**Version:** 1.0  
-**Last Updated:** December 2024  
+**Version:** 2.0  
+**Last Updated:** January 2025  
 **Purpose:** Comprehensive guide for onboarding new team members and understanding the InventWealth platform architecture and functionality.
 
 ---
@@ -198,6 +198,17 @@ Investor Payout = (Investor's Shares ÷ Total Outstanding Shares) × Net Distrib
 - Server Actions for form submissions and mutations (`app/actions/`)
 - Clear separation between public and authenticated endpoints
 
+#### 5. **Error Handling Pattern**
+- Centralized error handling utilities (`lib/utils/db-error-handler.ts`)
+- Comprehensive try-catch blocks around all database operations
+- User-friendly error messages with appropriate redirects
+- Graceful error recovery to prevent application crashes
+
+#### 6. **Toast Notification Pattern**
+- Consistent user feedback using Sonner toast notifications
+- Success/error messages displayed via toast for all form submissions
+- Appropriate routing after form submissions (redirect on success, stay on page on error)
+
 ### Request Flow
 
 ```
@@ -241,10 +252,12 @@ User Request
 ### 1. User Authentication & Onboarding
 
 #### Authentication
-- **Method**: Email magic link authentication via NextAuth.js
-- **No Passwords**: Users sign in via email link (passwordless)
+- **Method**: Email magic link authentication via NextAuth.js (primary)
+- **Development Mode**: Credentials-based login for testing (`admin`/`admin123` or `pogbonna@gmail.com`/`admin123`)
+- **Password Support**: Optional password-based authentication for admin users
 - **Session Management**: JWT-based sessions with database persistence
-- **Development Mode**: Credentials-based login for testing (`admin`/`admin123`)
+- **Role Enforcement**: Automatic ADMIN role assignment for `pogbonna@gmail.com`
+- **Error Handling**: Comprehensive error handling with user-friendly messages
 
 #### Onboarding Flow
 1. **Sign Up**: User enters email → Receives magic link → Clicks link → Account created
@@ -272,7 +285,8 @@ Properties are created by admins with the following attributes:
   - Name, slug (URL-friendly identifier)
   - City, country, address
   - Description, highlights (array of feature strings)
-  - Cover image, gallery (array of image URLs)
+  - Cover image, cover video, gallery (array of image URLs)
+  - File upload support for images and videos via API endpoint
 
 - **Investment Details**:
   - Property type (APARTMENT, VILLA, STUDIO, HOUSE, CONDO, TOWNHOUSE)
@@ -294,6 +308,13 @@ Properties are created by admins with the following attributes:
 - **Property Details**: View comprehensive property information
 - **Investment CTA**: Direct investment flow from property page
 - **Performance Metrics**: View rental statements and income history
+- **Media Gallery**: View property images, videos, and gallery
+
+#### Property Management (Admin)
+- **Create Property**: Add new property with file uploads (images, videos)
+- **Edit Property**: Update property details, media, and status
+- **Delete Property**: Remove properties from the platform
+- **Dynamic Share Calculation**: Available shares calculated dynamically based on confirmed investments
 
 ### 3. Investment System
 
@@ -445,10 +466,12 @@ Net Distributable Income = Gross Revenue - Operating Costs - Management Fee + In
 - **Recent Activity Feed**: Latest transactions, investments, payouts
 
 #### Property Management
-- **Create Property**: Add new property listings
-- **Edit Property**: Update property details, images, status
-- **View Properties**: List all properties with filters
+- **Create Property**: Add new property listings with file uploads (cover image, cover video, gallery)
+- **Edit Property**: Update property details, images, videos, status
+- **Delete Property**: Remove properties from the platform
+- **View Properties**: List all properties with filters and dynamic available shares calculation
 - **Property Details**: Comprehensive property view with investments and statements
+- **File Uploads**: API endpoint (`/api/admin/properties/upload-images`) for handling image/video uploads
 
 #### User Management
 - **User List**: View all investors and admins
@@ -850,11 +873,12 @@ Payout
 ### Frontend
 
 - **Framework**: Next.js 16.1.0 (App Router)
-- **Language**: TypeScript 5.x
+- **Language**: TypeScript 5.x (strict mode)
 - **Styling**: Tailwind CSS 4 + shadcn/ui components
 - **Charts**: Recharts 3.6.0
 - **Forms**: React Hook Form + Zod validation
 - **Icons**: Lucide React
+- **Notifications**: Sonner (toast notifications)
 - **PWA**: Service Worker, Web Push API
 
 ### Backend
@@ -866,6 +890,8 @@ Payout
 - **ORM**: Prisma 6.x
 - **Authentication**: NextAuth.js v5 (Auth.js)
 - **Email**: Nodemailer (SMTP)
+- **Error Handling**: Custom database error handler utilities (`lib/utils/db-error-handler.ts`)
+- **Validation**: Zod schema validation
 
 ### Infrastructure
 
@@ -881,7 +907,9 @@ Payout
 - **Linting**: ESLint
 - **Formatting**: Prettier
 - **Testing**: Playwright (E2E)
-- **Type Checking**: TypeScript
+- **Type Checking**: TypeScript (strict mode)
+- **Error Handling**: Centralized error handling utilities
+- **Notifications**: Sonner toast notifications
 
 ---
 
@@ -960,7 +988,10 @@ invent-wealth/
 │   └── seed.ts                  # Database seeding script
 ├── lib/                         # Shared utilities
 │   ├── content.ts               # Content loader
-│   └── utils.ts                 # General utilities
+│   ├── utils.ts                 # General utilities
+│   └── utils/                   # Utility modules
+│       ├── db-error-handler.ts  # Database error handling utilities
+│       └── statement-pro-rating.ts  # Statement pro-rating calculations
 ├── content/                     # Editable content (JSON)
 │   ├── home.json                # Homepage content
 │   ├── about.json               # About page content
@@ -992,6 +1023,7 @@ invent-wealth/
 - `GET /api/health`
 - **Purpose**: Application health check
 - **Response**: `{ status: "healthy", database: "connected", timestamp: "..." }`
+- **Error Handling**: Returns error status if database connection fails
 
 ### Authentication API
 
@@ -1015,6 +1047,8 @@ invent-wealth/
 - **Purpose**: Create new investment
 - **Auth**: Required (Investor)
 - **Body**: `{ propertyId, shares }`
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Validation**: Zod schema validation for input
 
 ### Onboarding API
 
@@ -1035,11 +1069,13 @@ invent-wealth/
 - **Purpose**: Register push notification subscription
 - **Auth**: Required
 - **Body**: `{ endpoint, keys: { p256dh, auth } }`
+- **Error Handling**: Graceful error handling if push service unavailable
 
 #### Send Notification
 - `POST /api/push/send`
 - **Purpose**: Send push notification (admin only)
 - **Auth**: Required (Admin)
+- **Error Handling**: Handles notification failures gracefully
 
 ### Admin API Routes
 
@@ -1055,6 +1091,11 @@ invent-wealth/
 
 #### Statements
 
+- `POST /api/admin/statements`
+  - **Purpose**: Create rental statement
+  - **Auth**: Required (Admin)
+  - **Error Handling**: Comprehensive error handling with database error handler utilities
+
 - `GET /api/admin/statements`
   - **Purpose**: List rental statements
   - **Auth**: Required (Admin)
@@ -1063,9 +1104,22 @@ invent-wealth/
   - **Purpose**: Get statement details
   - **Auth**: Required (Admin)
 
+- `PUT /api/admin/statements/[id]`
+  - **Purpose**: Update rental statement
+  - **Auth**: Required (Admin)
+  - **Error Handling**: Handles validation errors and database errors gracefully
+
 - `GET /api/admin/statements/[id]/download-expenses`
   - **Purpose**: Download statement expenses (CSV)
   - **Auth**: Required (Admin)
+
+#### Properties
+
+- `POST /api/admin/properties/upload-images`
+  - **Purpose**: Upload property images and videos
+  - **Auth**: Required (Admin)
+  - **Body**: FormData with files (coverImage, coverVideo, gallery)
+  - **Error Handling**: Handles file upload errors and validation
 
 ---
 
@@ -1089,8 +1143,10 @@ invent-wealth/
 
 - **SQL Injection Prevention**: Prisma parameterized queries
 - **XSS Protection**: React's built-in escaping
-- **Input Validation**: Zod schema validation
-- **Type Safety**: TypeScript end-to-end
+- **Input Validation**: Zod schema validation on all inputs
+- **Type Safety**: TypeScript end-to-end with strict mode
+- **Error Handling**: Comprehensive error handling prevents information leakage
+- **File Upload Security**: Validation and sanitization of uploaded files
 
 ### Audit & Compliance
 
@@ -1098,6 +1154,8 @@ invent-wealth/
 - **Payout Audit Trail**: Complete payout change history
 - **Transaction Records**: Immutable transaction history
 - **KYC Tracking**: User KYC status management
+- **Error Logging**: Comprehensive error logging for debugging and monitoring
+- **Database Error Tracking**: Centralized error handling with detailed logging
 
 ### Privacy
 
@@ -1219,6 +1277,73 @@ npm run dev
 
 ---
 
+## Error Handling Architecture
+
+### Database Error Handling
+
+The application uses a centralized error handling system (`lib/utils/db-error-handler.ts`) that provides:
+
+#### Error Types
+- **CONNECTION**: Database connection failures
+- **TIMEOUT**: Database operation timeouts
+- **NOT_FOUND**: Resource not found errors
+- **VALIDATION**: Data validation errors
+- **UNKNOWN**: Generic database errors
+
+#### Error Handling Functions
+
+1. **`handleDatabaseError(error, fallbackPath)`**
+   - Used in Server Components
+   - Analyzes error and redirects with user-friendly message
+   - Prevents application crashes
+
+2. **`handleDatabaseErrorResponse(error, fallbackPath)`**
+   - Used in API Routes
+   - Returns JSON error response with appropriate status code
+   - Provides consistent error format
+
+3. **`analyzeDatabaseError(error)`**
+   - Analyzes error and returns handling strategy
+   - Categorizes error type and determines if redirect is needed
+
+#### Implementation Pattern
+
+```typescript
+// Server Component
+try {
+  const data = await prisma.model.findMany();
+  // ... use data
+} catch (error) {
+  handleDatabaseError(error, "/fallback-path");
+}
+
+// API Route
+try {
+  const data = await prisma.model.create({ ... });
+  return NextResponse.json({ success: true, data });
+} catch (error) {
+  return handleDatabaseErrorResponse(error, "/fallback-path");
+}
+```
+
+### Toast Notification System
+
+All forms use Sonner toast notifications for consistent user feedback:
+
+- **Success Messages**: Green toast notifications on successful operations
+- **Error Messages**: Red toast notifications with error details
+- **Loading States**: Optional loading indicators during async operations
+- **Routing**: Automatic redirects on success, stay on page on error
+
+### TypeScript Type Safety
+
+The application enforces strict TypeScript typing:
+
+- **Explicit Type Annotations**: All function parameters have explicit types
+- **No Implicit Any**: Array callbacks (map, reduce, filter) have type annotations
+- **Prisma Types**: Generated Prisma types used throughout
+- **Zod Validation**: Runtime type validation with Zod schemas
+
 ## Future Enhancements
 
 ### Planned Features
@@ -1236,8 +1361,9 @@ npm run dev
 - **Caching**: Redis for session and data caching
 - **CDN**: Static asset CDN integration
 - **Monitoring**: Application performance monitoring
-- **Logging**: Centralized logging system
+- **Logging**: Centralized logging system (partially implemented)
 - **Testing**: Expanded test coverage
+- **Error Monitoring**: Integration with error tracking services (Sentry, etc.)
 
 ---
 
@@ -1261,7 +1387,33 @@ npm run dev
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: December 2024  
+**Document Version**: 2.0  
+**Last Updated**: January 2025  
 **Maintained By**: InventWealth Development Team
+
+## Recent Updates (January 2025)
+
+### Error Handling Improvements
+- ✅ Centralized database error handling utilities
+- ✅ Comprehensive try-catch blocks on all database operations
+- ✅ User-friendly error messages with appropriate redirects
+- ✅ Graceful error recovery to prevent application crashes
+
+### User Experience Improvements
+- ✅ Toast notifications (Sonner) for consistent user feedback
+- ✅ Property file uploads (images, videos, gallery)
+- ✅ Property deletion capability in admin portal
+- ✅ Dynamic available shares calculation
+
+### Type Safety Improvements
+- ✅ Full TypeScript strict mode compliance
+- ✅ Explicit type annotations on all function parameters
+- ✅ Fixed implicit `any` and `unknown` type errors
+- ✅ Enhanced type safety in array operations
+
+### Admin Features
+- ✅ Property deletion with cascade handling
+- ✅ File upload API for property media
+- ✅ Enhanced error handling in admin forms
+- ✅ Improved admin authentication with password support
 

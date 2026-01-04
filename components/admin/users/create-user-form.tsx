@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, ArrowLeft, XCircle } from "lucide-react";
 import Link from "next/link";
 import { createUserManually } from "@/app/actions/admin/users";
 import { OnboardingStatus, KycStatus } from "@prisma/client";
@@ -18,7 +18,6 @@ export function CreateUserForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<{
     email: string;
@@ -46,33 +45,6 @@ export function CreateUserForm() {
     investmentExperience: "intermediate",
   });
 
-  // Reset form to initial state
-  const resetForm = () => {
-    setFormData({
-      email: "",
-      name: "",
-      phone: "",
-      address: "",
-      country: "",
-      dob: "",
-      createdAt: "",
-      kycStatus: "APPROVED",
-      onboardingStatus: "COMPLETED",
-      riskTolerance: "moderate",
-      investmentExperience: "intermediate",
-    });
-    setError(null);
-  };
-
-  // Auto-hide success message after 5 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +54,6 @@ export function CreateUserForm() {
     
     setIsLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const result = await createUserManually({
@@ -100,21 +71,17 @@ export function CreateUserForm() {
         const errorMessage = ("error" in result && result.error) ? result.error : "Failed to create user";
         toast.error(errorMessage);
         setError(errorMessage);
+        setIsLoading(false);
         return;
       }
 
       // Show success message
       const successMessage = `User "${formData.name}" (${formData.email}) created successfully!`;
       toast.success(successMessage);
-      setSuccess(successMessage);
-
-      // Reset form fields
-      resetForm();
-
-      // Refresh router to update any cached data
-      router.refresh();
       
-      // Stay on the same page to allow creating another user
+      // Redirect to user list page to show the newly created user
+      router.push("/admin/users?success=user_created");
+      router.refresh();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       toast.error(errorMessage);
@@ -310,16 +277,6 @@ export function CreateUserForm() {
           </div>
         </CardContent>
       </Card>
-
-      {success && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertTitle className="text-green-800 dark:text-green-200">Success</AlertTitle>
-          <AlertDescription className="text-green-700 dark:text-green-300">
-            {success}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {error && (
         <Alert className="border-red-500 bg-red-50 dark:bg-red-950">
