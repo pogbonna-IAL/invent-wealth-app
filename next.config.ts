@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
     "/*": ["./node_modules/.prisma/client/**/*"],
   },
   
+  // Ensure server actions are properly included in standalone build
+  serverActions: {
+    bodySizeLimit: '2mb',
+  },
+  
   // Generate stable build ID for Server Actions compatibility
   // Server Actions require consistent build IDs across deployments
   generateBuildId: async () => {
@@ -53,6 +58,11 @@ const nextConfig: NextConfig = {
       return process.env.RAILWAY_GIT_COMMIT_SHA.substring(0, 12); // Use first 12 chars
     }
     
+    // Use Railway service ID + revision if available (stable per deployment)
+    if (process.env.RAILWAY_SERVICE_ID && process.env.RAILWAY_REPLICA_ID) {
+      return `${process.env.RAILWAY_SERVICE_ID}-${process.env.RAILWAY_REPLICA_ID}`;
+    }
+    
     // Use git commit SHA if available (stable per commit)
     try {
       const { execSync } = require('child_process');
@@ -64,12 +74,13 @@ const nextConfig: NextConfig = {
       // Git not available or not in a git repo - fall through
     }
     
-    // Fallback: Generate a stable build ID based on package.json version and timestamp
+    // Fallback: Use package.json version only (no timestamp to ensure stability)
     // This ensures Server Actions work correctly within the same deployment
     // Note: For production, set BUILD_ID or ensure git is available for stable IDs
     const packageJson = require('./package.json');
     const version = packageJson.version || '0.1.0';
-    return `build-${version}-${Date.now()}`;
+    // Remove timestamp to ensure same version = same build ID
+    return `build-${version}`;
   },
   
   async headers() {
